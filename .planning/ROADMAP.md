@@ -27,7 +27,7 @@ Decimal phases appear between their surrounding integers in numeric order.
   1. User can run a GSD skill command that prompts for organisation URL, project name, and PAT, and stores them for future use
   2. User can run a connection-test command and see a clear success or failure message confirming whether credentials are valid
   3. The `azdo-tools.cjs` helper script exists and handles all HTTP calls to the Azure DevOps REST API
-**Plans:** 2 plans
+**Plans:** 1/2 plans executed
 
 Plans:
 - [ ] 01-01-PLAN.md — Create azdo-tools.cjs helper script (config management + HTTP client + connection test)
@@ -80,7 +80,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Foundation | 0/2 | Not started | - |
+| 1. Foundation | 1/2 | In Progress|  |
 | 2. Sprint Data | 0/TBD | Not started | - |
 | 3. Analysis | 0/TBD | Not started | - |
 | 4. Status | 0/TBD | Not started | - |

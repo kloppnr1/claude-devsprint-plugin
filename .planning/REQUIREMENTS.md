@@ -7,8 +7,8 @@
 
 ### API Connection
 
-- [ ] **API-01**: User can configure Azure DevOps connection with organisation URL, project name, and PAT
-- [ ] **API-02**: User can validate that the connection works and credentials are correct
+- [x] **API-01**: User can configure Azure DevOps connection with organisation URL, project name, and PAT
+- [x] **API-02**: User can validate that the connection works and credentials are correct
 
 ### Sprint Data
 
@@ -60,8 +60,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| API-01 | Phase 1 | Pending |
-| API-02 | Phase 1 | Pending |
+| API-01 | Phase 1 | Complete |
+| API-02 | Phase 1 | Complete |
 | SPRT-01 | Phase 2 | Pending |
 | SPRT-02 | Phase 2 | Pending |
 | SPRT-03 | Phase 2 | Pending |
