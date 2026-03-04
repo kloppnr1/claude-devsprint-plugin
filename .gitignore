@@ -1,1 +1,2 @@
-.planning/
+# Exclude credentials file only - track all other planning docs
+.planning/azdo-config.json
