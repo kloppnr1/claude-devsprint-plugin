@@ -12,7 +12,7 @@ Four phases deliver the full workflow: stand up the API helper and verify creden
 
 Decimal phases appear between their surrounding integers in numeric order.
 
-- [ ] **Phase 1: Foundation** - Node.js helper script + Azure DevOps API connection with PAT auth
+- [x] **Phase 1: Foundation** - Node.js helper script + Azure DevOps API connection with PAT auth (completed 2026-03-04)
 - [ ] **Phase 2: Sprint Data** - Fetch current sprint and display backlog in GSD skill
 - [ ] **Phase 3: Analysis** - Repo mapping + task selection + AI technical breakdown
 - [ ] **Phase 4: Status** - Push work item status updates back to Azure DevOps
@@ -27,7 +27,7 @@ Decimal phases appear between their surrounding integers in numeric order.
   1. User can run a GSD skill command that prompts for organisation URL, project name, and PAT, and stores them for future use
   2. User can run a connection-test command and see a clear success or failure message confirming whether credentials are valid
   3. The `azdo-tools.cjs` helper script exists and handles all HTTP calls to the Azure DevOps REST API
-**Plans:** 1/2 plans executed
+**Plans:** 2/2 plans complete
 
 Plans:
 - [ ] 01-01-PLAN.md — Create azdo-tools.cjs helper script (config management + HTTP client + connection test)
@@ -80,7 +80,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Foundation | 1/2 | In Progress|  |
+| 1. Foundation | 2/2 | Complete   | 2026-03-04 |
 | 2. Sprint Data | 0/TBD | Not started | - |
 | 3. Analysis | 0/TBD | Not started | - |
 | 4. Status | 0/TBD | Not started | - |
