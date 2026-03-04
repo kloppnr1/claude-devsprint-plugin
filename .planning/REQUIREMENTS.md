@@ -18,9 +18,9 @@
 
 ### Task Analysis
 
-- [ ] **ANAL-01**: User can select a task from the sprint backlog for AI analysis
-- [ ] **ANAL-02**: AI analyzes the selected task and produces a technical breakdown (subtasks, approach, risks)
-- [ ] **ANAL-03**: User can review the analysis result and approve or request changes
+- [x] **ANAL-01**: User can select a task from the sprint backlog for AI analysis
+- [x] **ANAL-02**: AI analyzes the selected task and produces a technical breakdown (subtasks, approach, risks)
+- [x] **ANAL-03**: User can review the analysis result and approve or request changes
 
 ### Repo Mapping
 
@@ -65,9 +65,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 | SPRT-01 | Phase 2 | Complete |
 | SPRT-02 | Phase 2 | Complete |
 | SPRT-03 | Phase 2 | Complete |
-| ANAL-01 | Phase 3 | Pending |
-| ANAL-02 | Phase 3 | Pending |
-| ANAL-03 | Phase 3 | Pending |
+| ANAL-01 | Phase 3 | Complete |
+| ANAL-02 | Phase 3 | Complete |
+| ANAL-03 | Phase 3 | Complete |
 | REPO-01 | Phase 3 | Complete |
 | REPO-02 | Phase 3 | Complete |
 | STAT-01 | Phase 4 | Pending |
