@@ -48,19 +48,20 @@ Plans:
 - [x] 02-02-PLAN.md — Create /gsd:azdo-sprint skill command for backlog display
 
 ### Phase 3: Analysis
-**Goal**: User can select a sprint task, map it to a local repo, and receive an AI technical breakdown
+**Goal**: User can run /gsd:azdo-analyze to fetch assigned sprint stories, resolve target repos via branch links, and bootstrap GSD projects (PROJECT.md + ROADMAP.md) in each target repo
 **Depends on**: Phase 2
 **Requirements**: REPO-01, REPO-02, ANAL-01, ANAL-02, ANAL-03
 **Success Criteria** (what must be TRUE):
-  1. When a task belongs to a DevOps project seen for the first time, the skill asks the user for the local repo path and stores the mapping
-  2. For subsequent tasks in the same project, no prompt appears — the stored mapping is used automatically
-  3. User can select a task from the sprint backlog and trigger AI analysis on it
-  4. AI produces a technical breakdown containing subtasks, implementation approach, and identified risks
-  5. User can review the breakdown and either approve it or request changes before it is finalised
-**Plans**: TBD
+  1. Branch links on user stories are resolved to target repos automatically (no manual repo mapping)
+  2. Repo mappings are derived fresh from branch links each run (no stored state needed)
+  3. User can run /gsd:azdo-analyze and see assigned stories grouped by target repo
+  4. PROJECT.md and ROADMAP.md are generated in each target repo from Azure DevOps story data
+  5. User can review and approve or request changes to each generated project before it is finalized
+**Plans:** 2 plans
 
 Plans:
-(TBD — populated during plan-phase)
+- [ ] 03-01-PLAN.md — Add get-branch-links command to azdo-tools.cjs (branch link resolution)
+- [ ] 03-02-PLAN.md — Create /gsd:azdo-analyze skill command (sprint-to-GSD-project pipeline)
 
 ### Phase 4: Status
 **Goal**: User can update work item status in Azure DevOps directly from GSD
@@ -83,5 +84,5 @@ Phases execute in numeric order: 1 → 2 → 3 → 4
 |-------|----------------|--------|-----------|
 | 1. Foundation | 2/2 | Complete    | 2026-03-04 |
 | 2. Sprint Data | 2/2 | Complete   | 2026-03-04 |
-| 3. Analysis | 0/TBD | Not started | - |
+| 3. Analysis | 0/2 | In progress | - |
 | 4. Status | 0/TBD | Not started | - |
