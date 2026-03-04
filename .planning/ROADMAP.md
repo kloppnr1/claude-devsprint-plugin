@@ -57,7 +57,7 @@ Plans:
   3. User can run /gsd:azdo-analyze and see assigned stories grouped by target repo
   4. PROJECT.md and ROADMAP.md are generated in each target repo from Azure DevOps story data
   5. User can review and approve or request changes to each generated project before it is finalized
-**Plans:** 2 plans
+**Plans:** 1/2 plans executed
 
 Plans:
 - [ ] 03-01-PLAN.md — Add get-branch-links command to azdo-tools.cjs (branch link resolution)
@@ -84,5 +84,5 @@ Phases execute in numeric order: 1 → 2 → 3 → 4
 |-------|----------------|--------|-----------|
 | 1. Foundation | 2/2 | Complete    | 2026-03-04 |
 | 2. Sprint Data | 2/2 | Complete   | 2026-03-04 |
-| 3. Analysis | 0/2 | In progress | - |
+| 3. Analysis | 1/2 | In Progress|  |
 | 4. Status | 0/TBD | Not started | - |

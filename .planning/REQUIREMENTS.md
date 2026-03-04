@@ -24,8 +24,8 @@
 
 ### Repo Mapping
 
-- [ ] **REPO-01**: System asks user for local repo path when encountering a new DevOps project
-- [ ] **REPO-02**: System remembers repo mappings for subsequent sessions
+- [x] **REPO-01**: System asks user for local repo path when encountering a new DevOps project
+- [x] **REPO-02**: System remembers repo mappings for subsequent sessions
 
 ### Status
 
@@ -68,8 +68,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | ANAL-01 | Phase 3 | Pending |
 | ANAL-02 | Phase 3 | Pending |
 | ANAL-03 | Phase 3 | Pending |
-| REPO-01 | Phase 3 | Pending |
-| REPO-02 | Phase 3 | Pending |
+| REPO-01 | Phase 3 | Complete |
+| REPO-02 | Phase 3 | Complete |
 | STAT-01 | Phase 4 | Pending |
 
 **Coverage:**
