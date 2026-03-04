@@ -117,7 +117,7 @@ function loadConfig(cwd) {
   const configPath = getConfigPath(cwd);
   if (!fs.existsSync(configPath)) {
     throw new Error(
-      `No Azure DevOps config found at ${configPath}. Run /gsd:azdo-setup to configure.`
+      `No Azure DevOps config found at ${configPath}. Run /azdev-setup to configure.`
     );
   }
 
@@ -132,11 +132,11 @@ function loadConfig(cwd) {
   try {
     cfg = JSON.parse(raw);
   } catch (err) {
-    throw new Error(`Config file is not valid JSON: ${err.message}. Run /gsd:azdo-setup to reconfigure.`);
+    throw new Error(`Config file is not valid JSON: ${err.message}. Run /azdev-setup to reconfigure.`);
   }
 
   if (!cfg.org || !cfg.project || !cfg.pat) {
-    throw new Error(`Config file is missing required fields (org, project, pat). Run /gsd:azdo-setup to reconfigure.`);
+    throw new Error(`Config file is missing required fields (org, project, pat). Run /azdev-setup to reconfigure.`);
   }
 
   // Decode PAT: base64 -> ":rawpat" -> slice leading colon
@@ -632,12 +632,12 @@ async function cmdTest(cwd) {
   }
 
   if (projectsRes.status === 401) {
-    console.error('Authentication failed. Check your PAT is correct and has not expired. Run /gsd:azdo-setup to reconfigure.');
+    console.error('Authentication failed. Check your PAT is correct and has not expired. Run /azdev-setup to reconfigure.');
     process.exit(1);
   }
 
   if (projectsRes.status === 403) {
-    console.error('Authorisation denied. Check your PAT has the vso.project scope. Run /gsd:azdo-setup to reconfigure.');
+    console.error('Authorisation denied. Check your PAT has the vso.project scope. Run /azdev-setup to reconfigure.');
     process.exit(1);
   }
 
@@ -661,7 +661,7 @@ async function cmdTest(cwd) {
   // 404 is acceptable (item not found = auth is OK, just no item with id=1)
   // Only 401/403 means scope is missing
   if (workItemsRes.status === 401 || workItemsRes.status === 403) {
-    console.error('Authentication succeeded but work items access denied. Check your PAT has the vso.work scope. Run /gsd:azdo-setup to reconfigure.');
+    console.error('Authentication succeeded but work items access denied. Check your PAT has the vso.work scope. Run /azdev-setup to reconfigure.');
     process.exit(1);
   }
 
@@ -837,7 +837,7 @@ async function cmdUpdateState(cwd, args) {
       console.error(`Invalid state transition for work item ${id}: ${errorBody.message || res.body}. Check that '${state}' is a valid target state.`);
       process.exit(1);
     } else if (res.status === 403) {
-      console.error(`Status update failed for work item ${id}: PAT needs vso.work_write scope. Regenerate at https://dev.azure.com/_usersSettings/tokens and re-run /gsd:azdev-setup.`);
+      console.error(`Status update failed for work item ${id}: PAT needs vso.work_write scope. Regenerate at https://dev.azure.com/_usersSettings/tokens and re-run /azdev-setup.`);
       process.exit(1);
     } else {
       let errorBody = {};

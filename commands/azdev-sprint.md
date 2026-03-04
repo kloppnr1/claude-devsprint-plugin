@@ -1,5 +1,5 @@
 ---
-name: gsd:azdev-sprint
+name: azdev-sprint
 description: View current sprint backlog from Azure DevOps
 argument-hint: ""
 allowed-tools:

@@ -1,3 +1,3 @@
-# Exclude credentials file only - track all other planning docs
-.planning/azdo-config.json
+# Credentials (never commit PAT)
 .planning/azdev-config.json
+.planning/azdo-config.json

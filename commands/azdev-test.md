@@ -1,5 +1,5 @@
 ---
-name: gsd:azdev-test
+name: azdev-test
 description: Test Azure DevOps connection and verify credentials
 argument-hint: ""
 allowed-tools:

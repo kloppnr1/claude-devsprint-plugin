@@ -1,5 +1,5 @@
 ---
-name: gsd:azdev-setup
+name: azdev-setup
 description: Configure Azure DevOps connection credentials
 argument-hint: ""
 allowed-tools:

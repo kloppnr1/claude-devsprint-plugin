@@ -1,5 +1,5 @@
 ---
-name: gsd:azdev-analyze
+name: azdev-analyze
 description: Analyze sprint stories and bootstrap GSD projects in target repos
 argument-hint: ""
 allowed-tools:
