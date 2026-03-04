@@ -63,6 +63,18 @@
  *     stdout: JSON {"allResolved":bool,"children":[{"id":N,"title":"...","state":"..."},...]}
  *     allResolved is true when all children are in Resolved, Closed, or Done state.
  *     Exit 0 always (caller decides what to do with the result).
+ *
+ *   create-branch --repo <path> --story-id <id> --title <title> [--base <branch>]
+ *     Creates a feature branch from a base branch (default: develop, fallback: main).
+ *     Stashes uncommitted changes if working tree is dirty.
+ *     Branch name: feature/<storyId>-<slugified-title>
+ *     stdout: JSON {"branch":"...","base":"...","created":true|false}
+ *     Exit 0 on success, exit 1 on error.
+ *
+ *   create-pr --repo <path> --branch <name> --base <branch> --title <title> --body <body>
+ *     Pushes the branch to origin and creates a pull request using the gh CLI.
+ *     stdout: JSON {"pr":"<url>","branch":"...","base":"...","pushed":true}
+ *     Exit 0 on success, exit 1 on error.
  */
 
 'use strict';
@@ -70,6 +82,7 @@
 const fs = require('fs');
 const path = require('path');
 const https = require('https');
+const { execSync } = require('child_process');
 
 // ─── Config Helpers ────────────────────────────────────────────────────────────
 
@@ -925,6 +938,214 @@ async function cmdGetChildStates(cwd, args) {
   }
 }
 
+// ─── Git / PR Helpers ───────────────────────────────────────────────────────────
+
+/**
+ * Runs a shell command synchronously in a given directory.
+ * Returns { ok: true, stdout } on success or { ok: false, error } on failure.
+ * @param {string} cmd - Shell command to execute
+ * @param {string} cwd - Working directory
+ * @returns {{ok: boolean, stdout?: string, error?: string}}
+ */
+function run(cmd, cwd) {
+  try {
+    const stdout = execSync(cmd, { cwd, encoding: 'utf-8', stdio: ['pipe', 'pipe', 'pipe'] }).trim();
+    return { ok: true, stdout };
+  } catch (err) {
+    return { ok: false, error: (err.stderr || err.message || '').trim() };
+  }
+}
+
+/**
+ * Slugifies a story title for use in a branch name.
+ * Lowercase, replace non-alphanumeric with hyphens, collapse runs, trim, max 60 chars.
+ * @param {string} title
+ * @returns {string}
+ */
+function slugify(title) {
+  return title
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '')
+    .slice(0, 60);
+}
+
+/**
+ * Handles the create-branch command.
+ * Creates a feature branch from a base branch (default: develop, fallback: main).
+ *
+ * Usage: azdev-tools.cjs create-branch --repo <path> --story-id <id> --title <title> [--base <branch>]
+ *
+ * Steps:
+ *   1. Stash uncommitted changes (if any)
+ *   2. Fetch the base branch from origin (tries develop, falls back to main)
+ *   3. Create and checkout feature/<storyId>-<slug> from origin/<base>
+ *   4. If branch already exists, just checkout
+ *
+ * stdout: JSON {"branch":"feature/12345-add-user-reg","base":"develop","created":true|false}
+ * Exit 0 on success, exit 1 on error.
+ *
+ * @param {string} cwd - Working directory (unused, repo path comes from --repo)
+ * @param {string[]} args - CLI args
+ */
+async function cmdCreateBranch(cwd, args) {
+  const repoIdx = args.indexOf('--repo');
+  const storyIdx = args.indexOf('--story-id');
+  const titleIdx = args.indexOf('--title');
+  const baseIdx = args.indexOf('--base');
+
+  const repo = repoIdx !== -1 ? args[repoIdx + 1] : null;
+  const storyId = storyIdx !== -1 ? args[storyIdx + 1] : null;
+  const title = titleIdx !== -1 ? args[titleIdx + 1] : null;
+  const preferredBase = baseIdx !== -1 ? args[baseIdx + 1] : 'develop';
+
+  const missing = [];
+  if (!repo) missing.push('--repo');
+  if (!storyId) missing.push('--story-id');
+  if (!title) missing.push('--title');
+
+  if (missing.length > 0) {
+    console.error(`Missing required arguments: ${missing.join(', ')}`);
+    console.error('Usage: azdev-tools.cjs create-branch --repo <path> --story-id <id> --title <title> [--base <branch>]');
+    process.exit(1);
+  }
+
+  const repoPath = path.resolve(repo);
+  if (!fs.existsSync(repoPath)) {
+    console.error(`Repository path does not exist: ${repoPath}`);
+    process.exit(1);
+  }
+
+  try {
+    const branchName = `feature/${storyId}-${slugify(title)}`;
+
+    // Step 1: Stash if dirty
+    const status = run('git status --porcelain', repoPath);
+    if (status.ok && status.stdout.length > 0) {
+      const stash = run('git stash --include-untracked', repoPath);
+      if (!stash.ok) {
+        console.error(`Failed to stash changes: ${stash.error}`);
+        process.exit(1);
+      }
+    }
+
+    // Step 2: Determine base branch — try preferred, fall back to main
+    let baseBranch = preferredBase;
+    const fetchBase = run(`git fetch origin ${baseBranch}`, repoPath);
+    if (!fetchBase.ok) {
+      // Try main as fallback
+      baseBranch = preferredBase === 'main' ? 'develop' : 'main';
+      const fetchFallback = run(`git fetch origin ${baseBranch}`, repoPath);
+      if (!fetchFallback.ok) {
+        console.error(`Could not fetch base branch. Tried '${preferredBase}' and '${baseBranch}'. Error: ${fetchFallback.error}`);
+        process.exit(1);
+      }
+    }
+
+    // Step 3: Check if branch already exists locally
+    const branchExists = run(`git rev-parse --verify ${branchName}`, repoPath);
+    if (branchExists.ok) {
+      // Branch exists — just checkout
+      const checkout = run(`git checkout ${branchName}`, repoPath);
+      if (!checkout.ok) {
+        console.error(`Failed to checkout existing branch ${branchName}: ${checkout.error}`);
+        process.exit(1);
+      }
+      console.log(JSON.stringify({ branch: branchName, base: baseBranch, created: false }));
+      process.exit(0);
+    }
+
+    // Step 4: Create new branch from origin/<base>
+    const create = run(`git checkout -b ${branchName} origin/${baseBranch}`, repoPath);
+    if (!create.ok) {
+      console.error(`Failed to create branch ${branchName}: ${create.error}`);
+      process.exit(1);
+    }
+
+    console.log(JSON.stringify({ branch: branchName, base: baseBranch, created: true }));
+    process.exit(0);
+  } catch (err) {
+    console.error(err.message);
+    process.exit(1);
+  }
+}
+
+/**
+ * Handles the create-pr command.
+ * Pushes the current branch and creates a PR to a base branch using the gh CLI.
+ *
+ * Usage: azdev-tools.cjs create-pr --repo <path> --branch <name> --base <branch>
+ *          --title <title> --body <body>
+ *
+ * Steps:
+ *   1. Push the branch to origin with -u
+ *   2. Create a PR using gh pr create
+ *
+ * stdout: JSON {"pr":"https://...","branch":"...","base":"..."}
+ * Exit 0 on success, exit 1 on error.
+ *
+ * @param {string} cwd - Working directory (unused, repo path comes from --repo)
+ * @param {string[]} args - CLI args
+ */
+async function cmdCreatePr(cwd, args) {
+  const repoIdx = args.indexOf('--repo');
+  const branchIdx = args.indexOf('--branch');
+  const baseIdx = args.indexOf('--base');
+  const titleIdx = args.indexOf('--title');
+  const bodyIdx = args.indexOf('--body');
+
+  const repo = repoIdx !== -1 ? args[repoIdx + 1] : null;
+  const branch = branchIdx !== -1 ? args[branchIdx + 1] : null;
+  const base = baseIdx !== -1 ? args[baseIdx + 1] : 'develop';
+  const title = titleIdx !== -1 ? args[titleIdx + 1] : null;
+  const body = bodyIdx !== -1 ? args[bodyIdx + 1] : '';
+
+  const missing = [];
+  if (!repo) missing.push('--repo');
+  if (!branch) missing.push('--branch');
+  if (!title) missing.push('--title');
+
+  if (missing.length > 0) {
+    console.error(`Missing required arguments: ${missing.join(', ')}`);
+    console.error('Usage: azdev-tools.cjs create-pr --repo <path> --branch <name> --base <branch> --title <title> --body <body>');
+    process.exit(1);
+  }
+
+  const repoPath = path.resolve(repo);
+
+  try {
+    // Step 1: Push branch to origin
+    const push = run(`git push -u origin ${branch}`, repoPath);
+    if (!push.ok) {
+      console.error(`Failed to push branch ${branch}: ${push.error}`);
+      process.exit(1);
+    }
+
+    // Step 2: Create PR using gh CLI
+    // Escape title and body for shell safety
+    const safeTitle = title.replace(/'/g, "'\\''");
+    const safeBody = body.replace(/'/g, "'\\''");
+    const ghCmd = `gh pr create --base '${base}' --head '${branch}' --title '${safeTitle}' --body '${safeBody}'`;
+    const pr = run(ghCmd, repoPath);
+
+    if (!pr.ok) {
+      // Push succeeded but PR creation failed — report but don't fail hard
+      console.error(`Branch pushed but PR creation failed: ${pr.error}`);
+      console.log(JSON.stringify({ pr: null, branch, base, pushed: true, error: pr.error }));
+      process.exit(1);
+    }
+
+    // gh pr create outputs the PR URL on stdout
+    const prUrl = pr.stdout;
+    console.log(JSON.stringify({ pr: prUrl, branch, base, pushed: true }));
+    process.exit(0);
+  } catch (err) {
+    console.error(err.message);
+    process.exit(1);
+  }
+}
+
 // ─── CLI Router ────────────────────────────────────────────────────────────────
 
 async function main() {
@@ -990,6 +1211,15 @@ async function main() {
     console.error('  get-child-states --id <storyId>');
     console.error('               Fetch all child task states for a parent story');
     console.error('               stdout: JSON {allResolved: bool, children: [{id, title, state}]}');
+    console.error('');
+    console.error('  create-branch --repo <path> --story-id <id> --title <title> [--base <branch>]');
+    console.error('               Create a feature branch from develop (fallback: main)');
+    console.error('               Stashes dirty changes, fetches base, creates feature/<id>-<slug>');
+    console.error('               stdout: JSON {branch, base, created: bool}');
+    console.error('');
+    console.error('  create-pr --repo <path> --branch <name> --base <branch> --title <title> --body <body>');
+    console.error('               Push branch and create a PR using gh CLI');
+    console.error('               stdout: JSON {pr: "<url>", branch, base, pushed: bool}');
     process.exit(1);
   }
 
@@ -1032,9 +1262,17 @@ async function main() {
       await cmdGetChildStates(cwd, cmdArgs);
       break;
 
+    case 'create-branch':
+      await cmdCreateBranch(cwd, cmdArgs);
+      break;
+
+    case 'create-pr':
+      await cmdCreatePr(cwd, cmdArgs);
+      break;
+
     default:
       console.error(`Unknown command: ${command}`);
-      console.error('Available commands: save-config, load-config, test, get-sprint, get-sprint-items, get-branch-links, update-description, update-state, get-child-states');
+      console.error('Available commands: save-config, load-config, test, get-sprint, get-sprint-items, get-branch-links, update-description, update-state, get-child-states, create-branch, create-pr');
       process.exit(1);
   }
 }

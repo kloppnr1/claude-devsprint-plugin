@@ -39,6 +39,16 @@ azdev-tools.cjs CLI contracts used by this command:
     -> allResolved is true when every child is Resolved, Closed, or Done
     -> exit 0 on success, exit 1 on error
 
+  node ~/.claude/azdev-skill/bin/azdev-tools.cjs create-branch --repo <path> --story-id <id> --title <title> [--base <branch>]
+    -> Stashes dirty changes, fetches base branch (develop, fallback main), creates feature/<id>-<slug>
+    -> stdout: JSON {"branch":"...","base":"...","created":true|false}
+    -> exit 0 on success, exit 1 on error
+
+  node ~/.claude/azdev-skill/bin/azdev-tools.cjs create-pr --repo <path> --branch <name> --base <branch> --title <title> --body <body>
+    -> Pushes branch to origin, creates PR using gh CLI
+    -> stdout: JSON {"pr":"<url>","branch":"...","base":"...","pushed":true}
+    -> exit 0 on success, exit 1 on error
+
 azdev-task-map.json structure (written by /azdev-analyze):
   {
     "version": 1,
@@ -107,14 +117,10 @@ Execute Steps 2a–2g below. If any step encounters a non-fatal error, log it an
 
   **Step 2b — Create feature branch:**
 
-  1. Navigate to `{repoPath}`.
-  2. Stash any uncommitted changes: `git stash --include-untracked` (if working tree is dirty).
-  3. Fetch latest: `git fetch origin develop`.
-     If develop doesn't exist on remote, try `git fetch origin main` and use main as base. Log which base was used.
-  4. Create and checkout feature branch:
-     - Branch name: `feature/{storyId}-{slugified-storyTitle}` (lowercase, spaces→hyphens, max 60 chars for slug).
-     - Run: `git checkout -b {branchName} origin/develop` (or origin/main as fallback).
-  5. If branch already exists locally, just check it out: `git checkout {branchName}`.
+  Run: `node ~/.claude/azdev-skill/bin/azdev-tools.cjs create-branch --repo {repoPath} --story-id {storyId} --title "{storyTitle}"`
+
+  - If exit 0: parse JSON. Store `branch` as `branchName` and `base` as `baseBranch`.
+  - If exit 1: log error, record story as "skipped — branch creation failed", continue to next story.
 
   **Step 2c — Activate tasks:**
 
@@ -156,28 +162,12 @@ Execute Steps 2a–2g below. If any step encounters a non-fatal error, log it an
 
   **Step 2g — Push and create PR:**
 
-  1. Push: `git push -u origin {branchName}`
-  2. Create PR:
-     ```
-     gh pr create --base develop --head {branchName} --title "#{storyId} {storyTitle}" --body "$(cat <<'EOF'
-     ## Azure DevOps Story
-     #{storyId} — {storyTitle}
+  Build a PR body string with story info, changes summary, resolved tasks, and test plan checklist.
 
-     ## Changes
-     {Brief summary of implemented phases}
+  Run: `node ~/.claude/azdev-skill/bin/azdev-tools.cjs create-pr --repo {repoPath} --branch {branchName} --base {baseBranch} --title "#{storyId} {storyTitle}" --body "{prBody}"`
 
-     ## Tasks resolved
-     {list of resolved tasks}
-
-     ## Test plan
-     - [ ] Verify acceptance criteria from story
-     - [ ] Run automated tests
-     - [ ] Code review
-     EOF
-     )"
-     ```
-     If `gh pr create` fails, log the error. The branch is pushed — the PR can be created manually.
-  3. Store PR URL in `sprintResults`.
+  - If exit 0: parse JSON. Store `pr` URL in `sprintResults`.
+  - If exit 1: log error. Record "PR not created" and move on.
 
   Record story outcome: "completed" (with PR URL), "partial" (some tasks remain), or "skipped" (with reason).
 

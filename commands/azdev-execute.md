@@ -41,6 +41,16 @@ azdev-tools.cjs CLI contracts used by this command:
     -> allResolved is true when every child is Resolved, Closed, or Done
     -> exit 0 on success, exit 1 on error
 
+  node ~/.claude/azdev-skill/bin/azdev-tools.cjs create-branch --repo <path> --story-id <id> --title <title> [--base <branch>]
+    -> Stashes dirty changes, fetches base branch (develop, fallback main), creates feature/<id>-<slug>
+    -> stdout: JSON {"branch":"...","base":"...","created":true|false}
+    -> exit 0 on success, exit 1 on error
+
+  node ~/.claude/azdev-skill/bin/azdev-tools.cjs create-pr --repo <path> --branch <name> --base <branch> --title <title> --body <body>
+    -> Pushes branch to origin, creates PR using gh CLI
+    -> stdout: JSON {"pr":"<url>","branch":"...","base":"...","pushed":true}
+    -> exit 0 on success, exit 1 on error
+
 azdev-task-map.json structure (written by /azdev-analyze):
   {
     "version": 1,
@@ -101,16 +111,12 @@ Store the selected mapping as `current`.
 
 **Step 4 — Create feature branch:**
 
-1. Navigate to `{current.repoPath}`.
-2. Ensure working tree is clean: run `git status --porcelain`. If there are uncommitted changes, warn the user and ask how to proceed.
-3. Fetch latest from remote: `git fetch origin develop`.
-4. Create and checkout a feature branch from develop:
-   - Branch name: `feature/{storyId}-{slugified-storyTitle}` (lowercase, spaces→hyphens, max 60 chars for the slug part).
-   - Example: `feature/12345-add-user-registration`
-   - Run: `git checkout -b feature/{branchName} origin/develop`
-5. If the branch already exists locally (e.g., resuming work), just check it out: `git checkout feature/{branchName}`.
+Run: `node ~/.claude/azdev-skill/bin/azdev-tools.cjs create-branch --repo {current.repoPath} --story-id {current.storyId} --title "{current.storyTitle}"`
 
-Store the branch name as `current.branchName` for use in Step 9.
+- If exit 0: parse JSON. Store `branch` as `current.branchName` and `base` as `current.baseBranch`.
+  - If `created === true`: "Created branch {branch} from {base}"
+  - If `created === false`: "Checked out existing branch {branch}"
+- If exit 1: show error and stop.
 
 **Step 5 — Activate tasks in Azure DevOps:**
 
@@ -185,31 +191,28 @@ Run `node ~/.claude/azdev-skill/bin/azdev-tools.cjs get-child-states --id {curre
 
 **Step 9 — Push and create PR to develop:**
 
-1. Push the feature branch to remote:
-   `git push -u origin {current.branchName}`
+Build a PR body string containing:
+```
+## Azure DevOps Story
+#{current.storyId} — {current.storyTitle}
 
-2. Create a pull request to develop using the `gh` CLI:
-   ```
-   gh pr create --base develop --head {current.branchName} --title "#{current.storyId} {current.storyTitle}" --body "$(cat <<'EOF'
-   ## Azure DevOps Story
-   #{current.storyId} — {current.storyTitle}
+## Changes
+{Brief summary of what was implemented, based on the ROADMAP.md phases completed}
 
-   ## Changes
-   {Brief summary of what was implemented, based on the ROADMAP.md phases completed}
+## Tasks resolved
+- #{taskId} — {taskTitle}
+- #{taskId} — {taskTitle}
 
-   ## Tasks resolved
-   - #{taskId} — {taskTitle}
-   - #{taskId} — {taskTitle}
+## Test plan
+- [ ] Verify acceptance criteria from story
+- [ ] Run automated tests
+- [ ] Code review
+```
 
-   ## Test plan
-   - [ ] Verify acceptance criteria from story
-   - [ ] Run automated tests
-   - [ ] Code review
-   EOF
-   )"
-   ```
+Run: `node ~/.claude/azdev-skill/bin/azdev-tools.cjs create-pr --repo {current.repoPath} --branch {current.branchName} --base {current.baseBranch} --title "#{current.storyId} {current.storyTitle}" --body "{prBody}"`
 
-3. Display the PR URL.
+- If exit 0: parse JSON. Store `pr` URL for the summary.
+- If exit 1: warn user. The branch may already be pushed — suggest creating PR manually.
 
 **Step 10 — Final summary:**
 
