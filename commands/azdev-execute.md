@@ -137,16 +137,16 @@ Task status updates:
 
 **Step 6 — Execute the work:**
 
-This is the main implementation phase. Work through the project plan:
+This is the main implementation phase. The analysis is ALREADY DONE — PROJECT.md, ROADMAP.md, and REQUIREMENTS.md contain everything you need. Do NOT re-analyze the codebase.
 
 1. **Navigate to the target repo**: Use `{current.repoPath}` as the working directory for all file operations.
 
-2. **Follow the ROADMAP.md phases**: Read each phase's goal, requirements, and success criteria. Execute the plans in order.
+2. **Follow the ROADMAP.md phases**: Execute each phase in order. The plan already describes exactly what to do.
 
 3. **For each phase/plan**:
-   - Read the relevant source files in the repo to understand the current code.
+   - Read ONLY the specific files you need to edit (the plan tells you which ones).
    - Implement the changes described in the plan using Edit/Write tools.
-   - Run any tests or build commands if the project has them (check for package.json scripts, Makefile, etc.).
+   - Run any tests or build commands if the project has them (check package.json scripts, Makefile, etc.).
    - After implementing a plan, update ROADMAP.md to mark it complete (change `- [ ]` to `- [x]`).
 
 4. **Match tasks to work**: As you complete work that corresponds to a specific Azure DevOps task (from `current.taskTitles`), note which tasks have been completed.
@@ -154,6 +154,8 @@ This is the main implementation phase. Work through the project plan:
 5. **Handle issues**: If you encounter blockers or need clarification, use `AskUserQuestion` to consult the user. Do not guess at requirements.
 
 6. **Commit changes**: After meaningful chunks of work, commit changes via git. Use descriptive commit messages referencing the story ID (e.g., "feat: implement API endpoint for #{storyId}"). Do NOT ask the user — just commit directly on the feature branch.
+
+IMPORTANT: Do NOT spend time exploring or understanding the codebase broadly. The `/azdev` command already did that analysis and wrote the project plans. Trust the plans. Only read files that you are about to modify.
 
 **Step 7 — Auto-resolve activated tasks:**
 

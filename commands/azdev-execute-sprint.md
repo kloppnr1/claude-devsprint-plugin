@@ -135,18 +135,20 @@ Execute Steps 2a–2g below. If any step encounters a non-fatal error, log it an
 
   **Step 2d — Execute the work:**
 
-  This is the main implementation phase:
+  This is the main implementation phase. The analysis is ALREADY DONE — PROJECT.md, ROADMAP.md, and REQUIREMENTS.md contain everything needed. Do NOT re-analyze the codebase.
 
   1. Use `{repoPath}` as working directory for all file operations.
-  2. Follow ROADMAP.md phases in order.
+  2. Follow ROADMAP.md phases in order. The plan already describes exactly what to do.
   3. For each phase:
-     - Read relevant source files to understand current code.
+     - Read ONLY the specific files you need to edit (the plan tells you which ones).
      - Implement changes using Edit/Write tools.
      - Run tests/build if available (check package.json scripts, Makefile, etc.).
      - Mark phase complete in ROADMAP.md (`- [ ]` → `- [x]`).
   4. Match completed work to Azure DevOps tasks from `taskTitles`.
   5. On blockers: make your best judgment call and proceed. Log any assumptions made. Do NOT ask the user.
   6. Commit after meaningful chunks. Use descriptive messages: "feat: {description} (#{storyId})".
+
+  IMPORTANT: Do NOT spend time exploring or understanding the codebase broadly. The `/azdev` command already did that and wrote the project plans. Trust the plans. Only read files you are about to modify.
 
   **Step 2e — Auto-resolve activated tasks:**
 
