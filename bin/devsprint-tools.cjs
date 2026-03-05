@@ -1665,10 +1665,102 @@ async function cmdCreatePr(cwd, args) {
 }
 
 /**
- * Handles the get-pr command.
- * Fetches a pull request by ID from a specific repository, including linked work items.
+ * Handles the find-pr command.
+ * Searches all repos for a PR whose title starts with "#{storyId}".
+ * Prefers active PRs over completed ones. Returns the most recent match.
  *
- * Usage: devsprint-tools.cjs get-pr --repo-name <name> --pr-id <id> --cwd <path>
+ * Usage: devsprint-tools.cjs find-pr --story-id <id> --cwd <path>
+ *
+ * stdout: JSON {prId, title, description, status, sourceBranch, targetBranch, createdBy, repoName, url, workItemIds}
+ * Exit 0 on success, exit 1 if no PR found.
+ */
+async function cmdFindPr(cwd, args) {
+  const storyIdIdx = args.indexOf('--story-id');
+  const storyId = storyIdIdx !== -1 ? args[storyIdIdx + 1] : null;
+
+  if (!storyId) {
+    console.error('Missing required argument: --story-id <id>');
+    process.exit(1);
+  }
+
+  try {
+    const cfg = loadConfig(cwd);
+    const encodedPat = Buffer.from(':' + cfg.pat).toString('base64');
+
+    // List all repos
+    const reposUrl = `${cfg.org}/${cfg.project}/_apis/git/repositories?api-version=7.1`;
+    const reposRes = await makeRequest(reposUrl, encodedPat);
+    if (reposRes.status !== 200) {
+      console.error(`Failed to list repos: HTTP ${reposRes.status}`);
+      process.exit(1);
+    }
+    const repos = JSON.parse(reposRes.body).value || [];
+
+    let bestMatch = null;
+
+    for (const repo of repos) {
+      if (repo.isDisabled) continue;
+
+      // Search for PRs in this repo (both active and completed)
+      const searchUrl = `${cfg.org}/${cfg.project}/_apis/git/repositories/${encodeURIComponent(repo.name)}/pullrequests?api-version=7.1&searchCriteria.status=all&$top=50`;
+      const searchRes = await makeRequest(searchUrl, encodedPat);
+      if (searchRes.status !== 200) continue;
+
+      const prs = JSON.parse(searchRes.body).value || [];
+      for (const pr of prs) {
+        // Match title starting with #{storyId}
+        if (pr.title && pr.title.startsWith(`#${storyId}`)) {
+          const candidate = {
+            prId: pr.pullRequestId,
+            title: pr.title,
+            description: pr.description || '',
+            status: pr.status,
+            sourceBranch: (pr.sourceRefName || '').replace('refs/heads/', ''),
+            targetBranch: (pr.targetRefName || '').replace('refs/heads/', ''),
+            createdBy: pr.createdBy?.displayName || '',
+            repoName: repo.name,
+          };
+
+          // Prefer active over completed
+          if (!bestMatch || (candidate.status === 'active' && bestMatch.status !== 'active')) {
+            bestMatch = candidate;
+          }
+        }
+      }
+    }
+
+    if (!bestMatch) {
+      console.error(`No PR found for story #${storyId}. PR title should start with "#${storyId}".`);
+      process.exit(1);
+    }
+
+    // Fetch work item links for the found PR
+    const wiUrl = `${cfg.org}/${cfg.project}/_apis/git/repositories/${encodeURIComponent(bestMatch.repoName)}/pullrequests/${bestMatch.prId}/workitems?api-version=7.1`;
+    const wiRes = await makeRequest(wiUrl, encodedPat);
+    let workItemIds = [];
+    if (wiRes.status === 200) {
+      const wiData = JSON.parse(wiRes.body);
+      workItemIds = (wiData.value || []).map(wi => parseInt(wi.id));
+    }
+
+    const webUrl = `${cfg.org}/${cfg.project}/_git/${encodeURIComponent(bestMatch.repoName)}/pullRequest/${bestMatch.prId}`;
+    bestMatch.url = webUrl;
+    bestMatch.workItemIds = workItemIds;
+
+    console.log(JSON.stringify(bestMatch));
+    process.exit(0);
+  } catch (err) {
+    console.error(err.message);
+    process.exit(1);
+  }
+}
+
+/**
+ * Handles the get-pr command.
+ * Fetches a pull request by ID. If --repo-name is given, looks in that repo directly.
+ * If --repo-name is omitted, searches across all repos in the project.
+ *
+ * Usage: devsprint-tools.cjs get-pr --pr-id <id> [--repo-name <name>] --cwd <path>
  *
  * stdout: JSON {prId, title, description, status, sourceBranch, targetBranch, createdBy, repoName, url, workItemIds}
  * Exit 0 on success, exit 1 on error.
@@ -1677,11 +1769,11 @@ async function cmdGetPr(cwd, args) {
   const repoNameIdx = args.indexOf('--repo-name');
   const prIdIdx = args.indexOf('--pr-id');
 
-  const repoName = repoNameIdx !== -1 ? args[repoNameIdx + 1] : null;
+  let repoName = repoNameIdx !== -1 ? args[repoNameIdx + 1] : null;
   const prId = prIdIdx !== -1 ? args[prIdIdx + 1] : null;
 
-  if (!repoName || !prId) {
-    console.error('Missing required arguments: --repo-name <name> --pr-id <id>');
+  if (!prId) {
+    console.error('Missing required argument: --pr-id <id>');
     process.exit(1);
   }
 
@@ -1689,11 +1781,37 @@ async function cmdGetPr(cwd, args) {
     const cfg = loadConfig(cwd);
     const encodedPat = Buffer.from(':' + cfg.pat).toString('base64');
 
+    // If no repo name given, search across all repos
+    if (!repoName) {
+      const reposUrl = `${cfg.org}/${cfg.project}/_apis/git/repositories?api-version=7.1`;
+      const reposRes = await makeRequest(reposUrl, encodedPat);
+      if (reposRes.status !== 200) {
+        console.error(`Failed to list repos: HTTP ${reposRes.status}`);
+        process.exit(1);
+      }
+      const repos = JSON.parse(reposRes.body).value || [];
+
+      for (const repo of repos) {
+        if (repo.isDisabled) continue;
+        const tryUrl = `${cfg.org}/${cfg.project}/_apis/git/repositories/${encodeURIComponent(repo.name)}/pullrequests/${prId}?api-version=7.1`;
+        const tryRes = await makeRequest(tryUrl, encodedPat);
+        if (tryRes.status === 200) {
+          repoName = repo.name;
+          break;
+        }
+      }
+
+      if (!repoName) {
+        console.error(`PR #${prId} not found in any repository in the project.`);
+        process.exit(1);
+      }
+    }
+
     const url = `${cfg.org}/${cfg.project}/_apis/git/repositories/${encodeURIComponent(repoName)}/pullrequests/${prId}?api-version=7.1`;
     const res = await makeRequest(url, encodedPat);
 
     if (res.status !== 200) {
-      console.error(`Failed to fetch PR #${prId}: HTTP ${res.status}`);
+      console.error(`Failed to fetch PR #${prId} from ${repoName}: HTTP ${res.status}`);
       process.exit(1);
     }
 
@@ -1733,11 +1851,14 @@ async function cmdGetPr(cwd, args) {
  * Handles the get-pr-threads command.
  * Fetches all comment threads on a pull request, including review comments with file/line context.
  *
- * Usage: devsprint-tools.cjs get-pr-threads --repo-name <name> --pr-id <id> [--active-only] --cwd <path>
+ * Usage: devsprint-tools.cjs get-pr-threads --pr-id <id> [--repo-name <name>] [--active-only] --cwd <path>
  *
- * stdout: JSON array [{threadId, status, comments: [{author, content, publishedDate}], filePath, lineNumber}]
+ * If --repo-name is omitted, the repo is auto-detected by searching for the PR across all repos.
+ *
+ * stdout: JSON array [{threadId, status, comments: [{author, content, publishedDate}], filePath, lineNumber, repoName}]
  *   status: "active" | "fixed" | "closed" | "byDesign" | "pending" | "wontFix" | "unknown"
  *   filePath/lineNumber: only present for file-level comments
+ *   repoName: always included (useful when auto-detected)
  * Exit 0 on success, exit 1 on error.
  */
 async function cmdGetPrThreads(cwd, args) {
@@ -1745,12 +1866,38 @@ async function cmdGetPrThreads(cwd, args) {
   const prIdIdx = args.indexOf('--pr-id');
   const activeOnly = args.includes('--active-only');
 
-  const repoName = repoNameIdx !== -1 ? args[repoNameIdx + 1] : null;
+  let repoName = repoNameIdx !== -1 ? args[repoNameIdx + 1] : null;
   const prId = prIdIdx !== -1 ? args[prIdIdx + 1] : null;
 
-  if (!repoName || !prId) {
-    console.error('Missing required arguments: --repo-name <name> --pr-id <id>');
+  if (!prId) {
+    console.error('Missing required argument: --pr-id <id>');
     process.exit(1);
+  }
+
+  // If no repo name, auto-detect by finding the PR
+  if (!repoName) {
+    const cfg = loadConfig(cwd);
+    const encodedPat = Buffer.from(':' + cfg.pat).toString('base64');
+    const reposUrl = `${cfg.org}/${cfg.project}/_apis/git/repositories?api-version=7.1`;
+    const reposRes = await makeRequest(reposUrl, encodedPat);
+    if (reposRes.status !== 200) {
+      console.error(`Failed to list repos: HTTP ${reposRes.status}`);
+      process.exit(1);
+    }
+    const repos = JSON.parse(reposRes.body).value || [];
+    for (const repo of repos) {
+      if (repo.isDisabled) continue;
+      const tryUrl = `${cfg.org}/${cfg.project}/_apis/git/repositories/${encodeURIComponent(repo.name)}/pullrequests/${prId}?api-version=7.1`;
+      const tryRes = await makeRequest(tryUrl, encodedPat);
+      if (tryRes.status === 200) {
+        repoName = repo.name;
+        break;
+      }
+    }
+    if (!repoName) {
+      console.error(`PR #${prId} not found in any repository in the project.`);
+      process.exit(1);
+    }
   }
 
   try {
@@ -1810,7 +1957,9 @@ async function cmdGetPrThreads(cwd, args) {
     // Filter out empty threads (no user comments)
     threads = threads.filter(t => t.comments.length > 0);
 
-    console.log(JSON.stringify(threads));
+    // Include repoName in output (useful when auto-detected)
+    const output = { repoName, threads };
+    console.log(JSON.stringify(output));
     process.exit(0);
   } catch (err) {
     console.error(err.message);
@@ -2078,8 +2227,14 @@ async function main() {
     console.error('               stdout: JSON {pr: "<url>", prId: N, branch, base, pushed: bool, linked: bool}');
     console.error('');
     console.error('');
-    console.error('  get-pr --repo-name <name> --pr-id <id>');
+    console.error('  find-pr --story-id <id>');
+    console.error('               Find a PR by story ID (searches all repos for title starting with "#<id>")');
+    console.error('               Prefers active PRs over completed ones');
+    console.error('               stdout: JSON {prId, title, status, sourceBranch, targetBranch, repoName, url, workItemIds}');
+    console.error('');
+    console.error('  get-pr --pr-id <id> [--repo-name <name>]');
     console.error('               Fetch pull request details (title, branches, status, linked work items)');
+    console.error('               If --repo-name omitted, searches all repos');
     console.error('               stdout: JSON {prId, title, description, status, sourceBranch, targetBranch, ...}');
     console.error('');
     console.error('  get-pr-threads --repo-name <name> --pr-id <id> [--active-only]');
@@ -2163,6 +2318,10 @@ async function main() {
       await cmdCreatePr(cwd, cmdArgs);
       break;
 
+    case 'find-pr':
+      await cmdFindPr(cwd, cmdArgs);
+      break;
+
     case 'get-pr':
       await cmdGetPr(cwd, cmdArgs);
       break;
@@ -2201,7 +2360,7 @@ async function main() {
 
     default:
       console.error(`Unknown command: ${command}`);
-      console.error('Available commands: save-config, load-config, test, get-sprint, get-sprint-items, get-branch-links, update-description, update-acceptance-criteria, update-state, get-child-states, create-branch, create-pr, get-pr, get-pr-threads, show-sprint, list-repos, add-comment, delete-comment, create-work-item, list-teams, get-team-area');
+      console.error('Available commands: save-config, load-config, test, get-sprint, get-sprint-items, get-branch-links, update-description, update-acceptance-criteria, update-state, get-child-states, create-branch, create-pr, find-pr, get-pr, get-pr-threads, show-sprint, list-repos, add-comment, delete-comment, create-work-item, list-teams, get-team-area');
       process.exit(1);
   }
 }

@@ -1,7 +1,7 @@
 ---
 name: devsprint-pr-fix
 description: Fix PR review comments from Azure DevOps
-argument-hint: "<pr-id> <repo-name>"
+argument-hint: "<story-id>"
 allowed-tools:
   - Read
   - Write
@@ -16,8 +16,8 @@ allowed-tools:
 <objective>
 Fetch review comments from an Azure DevOps pull request, check out the PR branch, present the issues to the user, fix them, and push the fixes.
 
-Arguments: `<pr-id> <repo-name>` — both required.
-Example: `/devsprint-pr-fix 1234 NewSettlement.CustomerSupport`
+Arguments: `<story-id>` — required. The PR and repository are auto-detected by searching for a PR whose title starts with `#{storyId}`.
+Example: `/devsprint-pr-fix 42917`
 </objective>
 
 <execution_context>
@@ -32,11 +32,14 @@ devsprint-tools.cjs CLI contracts used by this command:
   node ~/.claude/bin/devsprint-tools.cjs load-config --cwd $CWD
     -> stdout: JSON {"org":"...","project":"...","pat":"<raw-decoded>"}
 
-  node ~/.claude/bin/devsprint-tools.cjs get-pr --repo-name <name> --pr-id <id> --cwd $CWD
+  node ~/.claude/bin/devsprint-tools.cjs find-pr --story-id <id> --cwd $CWD
+    -> Searches all repos for a PR whose title starts with "#{storyId}"
+    -> Returns the most recent matching PR (active PRs preferred over completed)
     -> stdout: JSON {"prId":N,"title":"...","description":"...","status":"...","sourceBranch":"...","targetBranch":"...","createdBy":"...","repoName":"...","url":"...","workItemIds":[...]}
 
-  node ~/.claude/bin/devsprint-tools.cjs get-pr-threads --repo-name <name> --pr-id <id> [--active-only] --cwd $CWD
-    -> stdout: JSON array [{"threadId":N,"status":"active|fixed|closed|...","comments":[{"author":"...","content":"...","publishedDate":"..."}],"filePath":"/src/...", "lineNumber":N}]
+  node ~/.claude/bin/devsprint-tools.cjs get-pr-threads --pr-id <id> --repo-name <name> [--active-only] --cwd $CWD
+    -> Fetches comment threads on a PR (repo-name required here, obtained from find-pr)
+    -> stdout: JSON {"repoName":"...","threads":[{"threadId":N,"status":"active|fixed|closed|...","comments":[{"author":"...","content":"...","publishedDate":"..."}],"filePath":"/src/...", "lineNumber":N}]}
     -> filePath and lineNumber are only present for file-level comments
     -> --active-only: filter to threads with status "active"
 </context>
@@ -45,24 +48,23 @@ devsprint-tools.cjs CLI contracts used by this command:
 
 **Step 1 — Parse arguments:**
 
-Extract `prId` and `repoName` from the arguments. Both are required.
-- First argument: PR ID (numeric)
-- Second argument: Repository name (e.g., `NewSettlement.CustomerSupport`)
+Extract `storyId` from the arguments.
+- First argument: Story ID (numeric, with or without `#` prefix)
 
-If either is missing, display usage: "Usage: `/devsprint-pr-fix <pr-id> <repo-name>`" and stop.
+If missing, display usage: "Usage: `/devsprint-pr-fix <story-id>`" and stop.
 
 **Step 2 — Check prerequisites:**
 
 1. Verify `~/.claude/bin/devsprint-tools.cjs` exists.
 2. Run `load-config` to verify Azure DevOps connection.
 
-**Step 3 — Fetch PR details:**
+**Step 3 — Find PR by story ID:**
 
-Run: `node ~/.claude/bin/devsprint-tools.cjs get-pr --repo-name {repoName} --pr-id {prId} --cwd $CWD`
+Run: `node ~/.claude/bin/devsprint-tools.cjs find-pr --story-id {storyId} --cwd $CWD`
 
-If exit 1: show error. Stop.
+If exit 1: show error. The story may not have a PR yet. Stop.
 
-Parse the JSON. Display:
+Parse the JSON. Store `prId`, `repoName`, `sourceBranch`, `targetBranch`. Display:
 ```
 === PR #{prId}: {title} ===
 Status: {status}
@@ -76,9 +78,9 @@ If status is "completed" or "abandoned": warn "PR is already {status}. Continue 
 
 **Step 4 — Fetch PR comment threads:**
 
-Run: `node ~/.claude/bin/devsprint-tools.cjs get-pr-threads --repo-name {repoName} --pr-id {prId} --active-only --cwd $CWD`
+Run: `node ~/.claude/bin/devsprint-tools.cjs get-pr-threads --pr-id {prId} --repo-name {repoName} --active-only --cwd $CWD`
 
-Parse the JSON array.
+Parse the JSON. Extract `threads` array from the response.
 
 If no active threads: display "No active review comments on this PR. Nothing to fix." Stop.
 
@@ -178,7 +180,7 @@ Next steps:
 
 <error_handling>
 
-- PR not found: "PR #{prId} not found in repo {repoName}. Check the PR ID and repo name."
+- No PR found for story: "No PR found for story #{storyId}. The PR title should start with '#{storyId}'."
 - No active comments: "No active review comments. Nothing to fix."
 - Branch checkout fails: try `git stash` first, then retry. If still failing, show error.
 - File from comment not found locally: warn "File {filePath} from review comment not found in repo. It may have been deleted or renamed." Skip that comment.
@@ -187,7 +189,7 @@ Next steps:
 </error_handling>
 
 <success_criteria>
-- `/devsprint-pr-fix 1234 NewSettlement.CustomerSupport` fetches PR and active comments
+- `/devsprint-pr-fix 42917` finds the PR by story ID and fetches active comments
 - User sees all active review comments grouped by file
 - User can fix all or select specific comments
 - PR branch is checked out and tests verified before changes
