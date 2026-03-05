@@ -55,6 +55,29 @@ devsprint-tools.cjs CLI contracts used by this command:
     -> stdout: JSON {"pr":"<url>","prId":N,"branch":"...","base":"...","pushed":true,"linked":true|false}
     -> exit 0 on success, exit 1 on error
 
+devsprint-execution-log.json structure (written by /devsprint-execute after each story):
+  {
+    "executions": [
+      {
+        "storyId": 12345,
+        "storyTitle": "As a user I want...",
+        "status": "completed|partial|skipped",
+        "branch": "feature/12345-...",
+        "baseBranch": "develop",
+        "prUrl": "https://...",
+        "prId": 123,
+        "tasksResolved": [12346, 12347],
+        "tasksRemaining": [12348],
+        "testsPassed": 42,
+        "testsFailed": 0,
+        "testCommand": "dotnet test",
+        "testSuiteStatus": "all passed|failures|no test infrastructure",
+        "skipReason": null,
+        "completedAt": "2025-01-15T12:00:00.000Z"
+      }
+    ]
+  }
+
 devsprint-task-map.json structure (written by /devsprint-plan):
   {
     "version": 1,
@@ -99,23 +122,100 @@ Check if the user passed a story ID as argument (e.g., `/devsprint-execute 42920
 4. Read `$CWD/.planning/devsprint-task-map.json` using the Read tool. Parse the JSON.
    If the `mappings` array is empty: tell user "Task map has no story mappings. Run `/devsprint-plan` and approve at least one story." Stop.
 
-**Step 3 — Select stories to execute:**
+**Step 2.5 — Load execution log:**
+
+Read `$CWD/.planning/devsprint-execution-log.json` if it exists. This file tracks previous execution results.
+
+Structure:
+```json
+{
+  "executions": [
+    {
+      "storyId": 12345,
+      "status": "completed",
+      "branch": "feature/12345-...",
+      "prUrl": "https://...",
+      "tasksResolved": [12346, 12347],
+      "tasksRemaining": [],
+      "testsPassed": 42,
+      "testsFailed": 0,
+      "testSuiteStatus": "all passed",
+      "completedAt": "2025-01-15T12:00:00.000Z"
+    }
+  ]
+}
+```
+
+If the file doesn't exist, initialize as `{"executions": []}`. Store as `executionLog`.
+
+**Step 3 — Pre-flight status check and story selection:**
+
+**Step 3a — Fetch live Azure DevOps state:**
+
+Run `node ~/.claude/bin/devsprint-tools.cjs get-sprint-items --me --cwd $CWD` to get all sprint items with their current states.
+
+For each mapping in the task map, determine its status by checking:
+1. The execution log (was it previously executed?)
+2. The Azure DevOps state (is the story/tasks Resolved/Closed?)
+3. Whether the story title contains "BLOKERET" (blocked)
+4. Whether the mapping has `repoPath` and `taskIds` (is it actionable?)
+
+Classify each story into one of these categories:
+- `already-executed` — found in execution log with status "completed" AND story is Resolved/Closed in DevOps
+- `already-resolved` — story or all tasks are Resolved/Closed/Done in DevOps (even if not in log)
+- `blocked` — title contains "BLOKERET"
+- `not-actionable` — no repoPath or empty taskIds
+- `partial` — found in execution log with status "partial" (some tasks remain)
+- `pending` — not yet executed, has work to do
+
+**Step 3b — Display pre-flight status:**
+
+Display a clear status table showing ALL stories and what will happen:
+
+```
+╔══════════════════════════════════════════════════════╗
+║              Pre-flight Status Check                 ║
+╠══════════════════════════════════════════════════════╣
+║ Sprint: {sprintName}                                 ║
+╚══════════════════════════════════════════════════════╝
+
+{for each mapping in task map, sorted by category:}
+
+Already completed:
+  ✓ #{storyId} — {storyTitle}
+    Executed: {completedAt} | PR: {prUrl} | Tasks: {resolved}/{total}
+  ✓ #{storyId} — {storyTitle}
+    Resolved in DevOps (all tasks done)
+
+Skipping:
+  ⊘ #{storyId} — {storyTitle} (BLOKERET)
+  ⊘ #{storyId} — {storyTitle} (no repo/tasks assigned)
+
+Will execute:
+  → #{storyId} — {storyTitle}
+    State: {devOpsState} | Tasks: {resolved}/{total} done | Repo: {repoPath}
+  → #{storyId} — {storyTitle} (RESUMING — {N} tasks remaining)
+    Previous: {completedAt} | Tasks: {resolved}/{total} done
+
+Summary: {pendingCount} to execute, {completedCount} already done, {skippedCount} skipped
+```
+
+**Step 3c — Select stories to execute:**
 
 If `mode === "single"`:
 - Find the mapping where `storyId` matches `targetStoryId`. If not found: "Story #{targetStoryId} is not in the task map. Available stories: {list}." Stop.
+- If the story is `already-executed` or `already-resolved`: warn user "Story #{targetStoryId} was already completed. Run with `--force` or resolve manually." In single mode, use `AskUserQuestion` to confirm if user wants to re-execute.
 - Store as a single-item list: `storiesToExecute = [matching mapping]`.
 
 If `mode === "all"`:
-- Use all mappings: `storiesToExecute = mappings`.
+- Only include stories classified as `pending` or `partial`.
+- Skip `already-executed`, `already-resolved`, `blocked`, and `not-actionable`.
+- If no stories remain to execute: display "All stories are already completed or skipped. Nothing to execute." Stop.
+- Store as: `storiesToExecute = [pending + partial stories]`.
 
 Display:
 ```
-=== Execution: {sprintName} ===
-Mode: {single ? "Single story" : "All stories (autonomous)"}
-Stories: {storiesToExecute.length}
-  {for each: "#{storyId} — {storyTitle} ({repoPath})"}
-
-{mode === "all" ? "Starting autonomous execution..." : ""}
+{mode === "all" ? "Starting autonomous execution of {storiesToExecute.length} stories..." : ""}
 ```
 
 Initialize an empty `executionResults` list to collect per-story outcomes.
@@ -144,7 +244,7 @@ Launch an Agent with the full execution instructions for this single story (Step
 - Instruction to run the FULL test suite (`dotnet test` / `npm test` / `pytest`) after all implementation — not just new tests. All tests must pass before resolving tasks.
 - Instruction to return a JSON summary: `{"storyId": N, "status": "completed|partial|skipped", "branch": "...", "prUrl": "...", "tasksResolved": [...], "tasksRemaining": [...], "testsPassed": N, "testsFailed": N, "testCommand": "...", "testSuiteStatus": "all passed|failures|no test infrastructure", "error": "..."}`
 
-Do NOT run agents in background — run them sequentially so each story completes before the next starts. Parse the agent's returned summary and add to `executionResults`.
+Do NOT run agents in background — run them sequentially so each story completes before the next starts. Parse the agent's returned summary, add to `executionResults`, and **immediately write to the execution log** (Step 4i) before launching the next agent. This ensures progress is persisted even if a later story crashes or the session is interrupted.
 
 **If `mode === "single"`:**
 Execute Steps 4a–4h directly in the main conversation (no agent needed — interactive mode benefits from direct user communication).
@@ -333,6 +433,37 @@ Execute Steps 4a–4h below. In `all` mode (inside agent): if any step encounter
 
   Record story outcome: "completed" (with PR URL), "partial" (some tasks remain), or "skipped" (with reason).
 
+  **Step 4i — Write to execution log:**
+
+  After each story completes (whether completed, partial, or skipped), immediately append the result to the execution log file at `$CWD/.planning/devsprint-execution-log.json`.
+
+  1. Read the current execution log (or use the in-memory `executionLog` from Step 2.5).
+  2. Find any existing entry for this `storyId` and replace it (upsert), or append if new.
+  3. Write the updated log back to disk using the Write tool.
+
+  Each entry contains:
+  ```json
+  {
+    "storyId": 12345,
+    "storyTitle": "As a user I want...",
+    "status": "completed|partial|skipped",
+    "branch": "feature/12345-...",
+    "baseBranch": "develop",
+    "prUrl": "https://...",
+    "prId": 123,
+    "tasksResolved": [12346, 12347],
+    "tasksRemaining": [12348],
+    "testsPassed": 42,
+    "testsFailed": 0,
+    "testCommand": "dotnet test",
+    "testSuiteStatus": "all passed",
+    "skipReason": null,
+    "completedAt": "2025-01-15T12:00:00.000Z"
+  }
+  ```
+
+  This ensures that if execution is interrupted mid-way through the story list, the next run picks up where it left off. The log is written after EACH story, not just at the end.
+
 **Step 5 — Summary:**
 
 Display:
@@ -342,8 +473,9 @@ Display:
 ╚══════════════════════════════════════════╝
 
 Sprint: {sprintName}
-Stories processed: {total}
+Stories processed: {total executed this run} | Previously completed: {from log} | Skipped: {blocked + not-actionable}
 
+This run:
 {for each story in executionResults:}
   {status icon} #{storyId} — {storyTitle}
      Branch: {branchName}
@@ -353,15 +485,23 @@ Stories processed: {total}
      PR: {prUrl | "not created — {reason}"}
 {end for}
 
+Previously completed (from execution log):
+{for each story in executionLog where status === "completed" and NOT in this run:}
+  ✓ #{storyId} — {storyTitle}
+     Completed: {completedAt} | PR: {prUrl}
+{end for}
+
 {If multiple stories:}
-Summary:
+Totals (this run):
   ✓ Completed: {count}
   ◐ Partial:   {count}
   ✗ Skipped:   {count}
 {end if}
 
-Pull requests:
-  {list of PR URLs}
+All pull requests (this run + previous):
+  {list of PR URLs from executionResults + executionLog}
+
+Execution log: .planning/devsprint-execution-log.json
 
 Next steps:
   {If tasks remain: "Run `/devsprint-execute {storyId}` to continue on remaining tasks."}
@@ -404,7 +544,11 @@ Next steps:
 <success_criteria>
 - `/devsprint-execute 42920` runs a single story interactively
 - `/devsprint-execute` runs all stories autonomously without user prompts
-- Already-resolved stories and tasks are skipped automatically
+- Pre-flight status check shows ALL stories with clear status BEFORE execution starts
+- Already-executed stories (from execution log) are skipped automatically
+- Already-resolved stories and tasks (from Azure DevOps) are skipped automatically
+- Execution log (`devsprint-execution-log.json`) is written after EACH story — survives interruptions
+- Re-running `/devsprint-execute` only processes stories not yet completed
 - Each story gets its own feature branch from develop
 - Tasks are activated before work and resolved after — automatically
 - Stories are resolved when all children are resolved — automatically
