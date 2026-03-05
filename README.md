@@ -62,8 +62,10 @@ This prompts for:
 - **Organization URL** — e.g., `https://dev.azure.com/yourorg` or just `yourorg`
 - **Project name** — your Azure DevOps project
 - **PAT** — your Personal Access Token
+- **Team** — auto-detected from the project's team list (you pick from options)
+- **Area path** — auto-resolved from your team's settings (no manual input needed)
 
-Credentials are stored in `.planning/devsprint-config.json` (PAT is base64-encoded). This file is project-local — add it to `.gitignore`.
+Team and area ensure that new work items land in the right place on the board. Credentials are stored in `.planning/devsprint-config.json` (PAT is base64-encoded). This file is project-local — add it to `.gitignore`.
 
 ### Verify connection
 
@@ -135,9 +137,13 @@ The `devsprint-tools.cjs` script handles all Azure DevOps API communication. It 
 
 ```bash
 # Credentials
-node devsprint-tools.cjs save-config --org <url> --project <name> --pat <token> --cwd <path>
+node devsprint-tools.cjs save-config --org <url> --project <name> --pat <token> [--team <team>] [--area <area>] --cwd <path>
 node devsprint-tools.cjs load-config --cwd <path>
 node devsprint-tools.cjs test --cwd <path>
+
+# Teams & areas
+node devsprint-tools.cjs list-teams --cwd <path>
+node devsprint-tools.cjs get-team-area --team "<team name>" --cwd <path>
 
 # Sprint
 node devsprint-tools.cjs get-sprint --cwd <path>
