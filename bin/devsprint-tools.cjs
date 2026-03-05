@@ -83,6 +83,16 @@
  *     stdout: JSON {"pr":"<url>","prId":N,"branch":"...","base":"...","pushed":true,"linked":true|false}
  *     Exit 0 on success, exit 1 on error.
  *
+ *   get-pr --repo-name <name> --pr-id <id> --cwd <path>
+ *     Fetches PR details (title, branches, status, linked work items).
+ *     stdout: JSON {"prId":N,"title":"...","status":"...","sourceBranch":"...","targetBranch":"...","workItemIds":[...]}
+ *     Exit 0 on success, exit 1 on error.
+ *
+ *   get-pr-threads --repo-name <name> --pr-id <id> [--active-only] --cwd <path>
+ *     Fetches comment threads on a PR (review comments with file/line context).
+ *     stdout: JSON array [{"threadId":N,"status":"active","comments":[...],"filePath":"...","lineNumber":N}]
+ *     Exit 0 on success, exit 1 on error.
+ *
  *   show-sprint [--me] [--cwd <path>]
  *     Fetches sprint data and renders a colored board to stdout using ANSI codes.
  *     Combines get-sprint + get-sprint-items + rendering in a single command.
@@ -1655,6 +1665,160 @@ async function cmdCreatePr(cwd, args) {
 }
 
 /**
+ * Handles the get-pr command.
+ * Fetches a pull request by ID from a specific repository, including linked work items.
+ *
+ * Usage: devsprint-tools.cjs get-pr --repo-name <name> --pr-id <id> --cwd <path>
+ *
+ * stdout: JSON {prId, title, description, status, sourceBranch, targetBranch, createdBy, repoName, url, workItemIds}
+ * Exit 0 on success, exit 1 on error.
+ */
+async function cmdGetPr(cwd, args) {
+  const repoNameIdx = args.indexOf('--repo-name');
+  const prIdIdx = args.indexOf('--pr-id');
+
+  const repoName = repoNameIdx !== -1 ? args[repoNameIdx + 1] : null;
+  const prId = prIdIdx !== -1 ? args[prIdIdx + 1] : null;
+
+  if (!repoName || !prId) {
+    console.error('Missing required arguments: --repo-name <name> --pr-id <id>');
+    process.exit(1);
+  }
+
+  try {
+    const cfg = loadConfig(cwd);
+    const encodedPat = Buffer.from(':' + cfg.pat).toString('base64');
+
+    const url = `${cfg.org}/${cfg.project}/_apis/git/repositories/${encodeURIComponent(repoName)}/pullrequests/${prId}?api-version=7.1`;
+    const res = await makeRequest(url, encodedPat);
+
+    if (res.status !== 200) {
+      console.error(`Failed to fetch PR #${prId}: HTTP ${res.status}`);
+      process.exit(1);
+    }
+
+    const pr = JSON.parse(res.body);
+
+    // Fetch linked work items
+    const wiUrl = `${cfg.org}/${cfg.project}/_apis/git/repositories/${encodeURIComponent(repoName)}/pullrequests/${prId}/workitems?api-version=7.1`;
+    const wiRes = await makeRequest(wiUrl, encodedPat);
+    let workItemIds = [];
+    if (wiRes.status === 200) {
+      const wiData = JSON.parse(wiRes.body);
+      workItemIds = (wiData.value || []).map(wi => parseInt(wi.id));
+    }
+
+    const webUrl = `${cfg.org}/${cfg.project}/_git/${encodeURIComponent(repoName)}/pullRequest/${pr.pullRequestId}`;
+
+    console.log(JSON.stringify({
+      prId: pr.pullRequestId,
+      title: pr.title,
+      description: pr.description || '',
+      status: pr.status,
+      sourceBranch: (pr.sourceRefName || '').replace('refs/heads/', ''),
+      targetBranch: (pr.targetRefName || '').replace('refs/heads/', ''),
+      createdBy: pr.createdBy?.displayName || '',
+      repoName: pr.repository?.name || repoName,
+      url: webUrl,
+      workItemIds
+    }));
+    process.exit(0);
+  } catch (err) {
+    console.error(err.message);
+    process.exit(1);
+  }
+}
+
+/**
+ * Handles the get-pr-threads command.
+ * Fetches all comment threads on a pull request, including review comments with file/line context.
+ *
+ * Usage: devsprint-tools.cjs get-pr-threads --repo-name <name> --pr-id <id> [--active-only] --cwd <path>
+ *
+ * stdout: JSON array [{threadId, status, comments: [{author, content, publishedDate}], filePath, lineNumber}]
+ *   status: "active" | "fixed" | "closed" | "byDesign" | "pending" | "wontFix" | "unknown"
+ *   filePath/lineNumber: only present for file-level comments
+ * Exit 0 on success, exit 1 on error.
+ */
+async function cmdGetPrThreads(cwd, args) {
+  const repoNameIdx = args.indexOf('--repo-name');
+  const prIdIdx = args.indexOf('--pr-id');
+  const activeOnly = args.includes('--active-only');
+
+  const repoName = repoNameIdx !== -1 ? args[repoNameIdx + 1] : null;
+  const prId = prIdIdx !== -1 ? args[prIdIdx + 1] : null;
+
+  if (!repoName || !prId) {
+    console.error('Missing required arguments: --repo-name <name> --pr-id <id>');
+    process.exit(1);
+  }
+
+  try {
+    const cfg = loadConfig(cwd);
+    const encodedPat = Buffer.from(':' + cfg.pat).toString('base64');
+
+    const url = `${cfg.org}/${cfg.project}/_apis/git/repositories/${encodeURIComponent(repoName)}/pullrequests/${prId}/threads?api-version=7.1`;
+    const res = await makeRequest(url, encodedPat);
+
+    if (res.status !== 200) {
+      console.error(`Failed to fetch PR threads: HTTP ${res.status}`);
+      process.exit(1);
+    }
+
+    const data = JSON.parse(res.body);
+    const statusMap = { 0: 'unknown', 1: 'active', 2: 'fixed', 3: 'wontFix', 4: 'closed', 5: 'byDesign', 6: 'pending' };
+
+    let threads = (data.value || [])
+      .filter(t => !t.isDeleted)
+      .filter(t => {
+        // Skip system threads (auto-generated by Azure DevOps)
+        const firstComment = t.comments?.[0];
+        if (firstComment && firstComment.commentType === 'system') return false;
+        return true;
+      })
+      .map(t => {
+        const status = statusMap[t.status] || 'unknown';
+        const comments = (t.comments || [])
+          .filter(c => !c.isDeleted && c.commentType !== 'system')
+          .map(c => ({
+            author: c.author?.displayName || '',
+            content: c.content || '',
+            publishedDate: c.publishedDate || ''
+          }));
+
+        const result = {
+          threadId: t.id,
+          status,
+          comments
+        };
+
+        // Add file context if present
+        if (t.threadContext?.filePath) {
+          result.filePath = t.threadContext.filePath;
+          if (t.threadContext.rightFileStart) {
+            result.lineNumber = t.threadContext.rightFileStart.line;
+          }
+        }
+
+        return result;
+      });
+
+    if (activeOnly) {
+      threads = threads.filter(t => t.status === 'active');
+    }
+
+    // Filter out empty threads (no user comments)
+    threads = threads.filter(t => t.comments.length > 0);
+
+    console.log(JSON.stringify(threads));
+    process.exit(0);
+  } catch (err) {
+    console.error(err.message);
+    process.exit(1);
+  }
+}
+
+/**
  * Handles the list-repos command.
  * Fetches Git repositories from the Azure DevOps project, sorted by most recent push.
  *
@@ -1913,6 +2077,16 @@ async function main() {
     console.error('               Links PR to story when --story-id is provided');
     console.error('               stdout: JSON {pr: "<url>", prId: N, branch, base, pushed: bool, linked: bool}');
     console.error('');
+    console.error('');
+    console.error('  get-pr --repo-name <name> --pr-id <id>');
+    console.error('               Fetch pull request details (title, branches, status, linked work items)');
+    console.error('               stdout: JSON {prId, title, description, status, sourceBranch, targetBranch, ...}');
+    console.error('');
+    console.error('  get-pr-threads --repo-name <name> --pr-id <id> [--active-only]');
+    console.error('               Fetch comment threads on a PR (review comments with file/line context)');
+    console.error('               --active-only: only return threads with status "active"');
+    console.error('               stdout: JSON array [{threadId, status, comments, filePath, lineNumber}]');
+    console.error('');
     console.error('  show-sprint [--me]');
     console.error('               Fetch sprint data and render colored board to stdout');
     console.error('               --me: filter to items assigned to the authenticated user');
@@ -1989,6 +2163,14 @@ async function main() {
       await cmdCreatePr(cwd, cmdArgs);
       break;
 
+    case 'get-pr':
+      await cmdGetPr(cwd, cmdArgs);
+      break;
+
+    case 'get-pr-threads':
+      await cmdGetPrThreads(cwd, cmdArgs);
+      break;
+
     case 'show-sprint':
       await cmdShowSprint(cwd, cmdArgs);
       break;
@@ -2019,7 +2201,7 @@ async function main() {
 
     default:
       console.error(`Unknown command: ${command}`);
-      console.error('Available commands: save-config, load-config, test, get-sprint, get-sprint-items, get-branch-links, update-description, update-acceptance-criteria, update-state, get-child-states, create-branch, create-pr, show-sprint, list-repos, add-comment, delete-comment, create-work-item, list-teams, get-team-area');
+      console.error('Available commands: save-config, load-config, test, get-sprint, get-sprint-items, get-branch-links, update-description, update-acceptance-criteria, update-state, get-child-states, create-branch, create-pr, get-pr, get-pr-threads, show-sprint, list-repos, add-comment, delete-comment, create-work-item, list-teams, get-team-area');
       process.exit(1);
   }
 }
