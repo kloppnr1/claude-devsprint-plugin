@@ -1423,6 +1423,57 @@ async function cmdCreatePr(cwd, args) {
   }
 }
 
+/**
+ * Handles the list-repos command.
+ * Fetches Git repositories from the Azure DevOps project, sorted by most recent push.
+ *
+ * Usage: azdev-tools.cjs list-repos [--top <N>] --cwd <path>
+ *
+ * stdout: JSON array [{name, id, remoteUrl, lastPushDate}]
+ * Exit 0 on success, exit 1 on error.
+ *
+ * @param {string} cwd - Working directory for loading Azure DevOps config
+ * @param {string[]} args - CLI args
+ */
+async function cmdListRepos(cwd, args) {
+  const topIdx = args.indexOf('--top');
+  const top = topIdx !== -1 ? parseInt(args[topIdx + 1], 10) : 20;
+
+  try {
+    const cfg = loadConfig(cwd);
+    const encodedPat = Buffer.from(':' + cfg.pat).toString('base64');
+
+    const url = `${cfg.org}/${cfg.project}/_apis/git/repositories?api-version=7.1`;
+    const res = await makeRequest(url, encodedPat);
+
+    if (res.status !== 200) {
+      console.error(`Failed to fetch repositories: HTTP ${res.status}`);
+      process.exit(1);
+    }
+
+    const data = JSON.parse(res.body);
+    const repos = (data.value || [])
+      .filter(r => !r.isDisabled)
+      .map(r => ({
+        name: r.name,
+        id: r.id,
+        remoteUrl: r.remoteUrl,
+        lastPushDate: r.project && r.project.lastUpdateTime ? r.project.lastUpdateTime : null,
+      }))
+      .sort((a, b) => {
+        // Sort by name for consistency (API doesn't guarantee lastPushDate on all repos)
+        return a.name.localeCompare(b.name);
+      })
+      .slice(0, top);
+
+    console.log(JSON.stringify(repos));
+    process.exit(0);
+  } catch (err) {
+    console.error(err.message);
+    process.exit(1);
+  }
+}
+
 // ─── CLI Router ────────────────────────────────────────────────────────────────
 
 async function main() {
@@ -1502,6 +1553,11 @@ async function main() {
     console.error('  show-sprint [--me]');
     console.error('               Fetch sprint data and render colored board to stdout');
     console.error('               --me: filter to items assigned to the authenticated user');
+    console.error('');
+    console.error('  list-repos [--top <N>]');
+    console.error('               List Git repositories in the Azure DevOps project');
+    console.error('               stdout: JSON array [{name, id, remoteUrl, lastPushDate}]');
+    console.error('               --top: limit results (default: 20)');
     process.exit(1);
   }
 
@@ -1556,9 +1612,13 @@ async function main() {
       await cmdShowSprint(cwd, cmdArgs);
       break;
 
+    case 'list-repos':
+      await cmdListRepos(cwd, cmdArgs);
+      break;
+
     default:
       console.error(`Unknown command: ${command}`);
-      console.error('Available commands: save-config, load-config, test, get-sprint, get-sprint-items, get-branch-links, update-description, update-state, get-child-states, create-branch, create-pr, show-sprint');
+      console.error('Available commands: save-config, load-config, test, get-sprint, get-sprint-items, get-branch-links, update-description, update-state, get-child-states, create-branch, create-pr, show-sprint, list-repos');
       process.exit(1);
   }
 }

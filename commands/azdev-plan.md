@@ -41,6 +41,11 @@ azdev-tools.cjs CLI contracts:
     -> stdout: JSON {"status":"updated","id":N}
     -> Uses PATCH API with application/json-patch+json content type
     -> exit 0 on success, exit 1 on error
+
+  node ~/.claude/bin/azdev-tools.cjs list-repos --cwd $CWD
+    -> stdout: JSON array [{"name":"...","id":"...","remoteUrl":"...","lastPushDate":"..."}]
+    -> Lists Git repositories in the Azure DevOps project
+    -> exit 0 on success, exit 1 on error
 </context>
 
 <process>
@@ -85,23 +90,22 @@ Filter to top-level stories only:
 
 **Step 4 — Ask user for target repo per story:**
 
-For each story to process, ask the user which local repository it belongs to.
+For each story to process, ask the user which Azure DevOps repository it belongs to.
 
-1. **Scan for known repos:** List git repos in the parent directory of `$CWD` by running:
-   `ls -d {parentDir}/*/.git 2>/dev/null | sed 's|/.git||' | xargs -I{} basename {}`
-   This gives a list of candidate repo names.
+1. **Fetch repos from Azure DevOps:** Run `node ~/.claude/bin/azdev-tools.cjs list-repos --cwd $CWD`.
+   Parse the JSON array of `{name, id, remoteUrl}`.
 
-2. **Check existing task map:** If `$CWD/.planning/azdev-task-map.json` exists, check if this story already has a `repoPath` mapping. If so, use it as the default suggestion.
+2. **Check existing task map:** If `$CWD/.planning/azdev-task-map.json` exists, check if this story already has a `repoPath` mapping. If so, use the repo name from that path as the default suggestion.
 
 3. **Ask the user** using `AskUserQuestion`:
    - Question: "Which repo should story #{id} ({title}) be planned in?"
-   - Options: list the discovered repo names as options (max 4, prioritize repos already in the task map). The user can also type a custom path via "Other".
-   - If only one repo is found, still confirm with the user.
+   - Options: list the Azure DevOps repo names as options (max 4, prioritize repos already in the task map). The user can also type a custom name/path via "Other".
 
 4. **Resolve the local path:**
-   - If the user picks a repo name: use `{parentDir}/{repoName}` as the path.
-   - If the user provides a custom path: use that path.
-   - Verify the path exists and contains `.git` via Bash. If not, warn and re-ask.
+   - Scan the parent directory of `$CWD` for a folder matching the selected repo name: `test -d "{parentDir}/{repoName}/.git"`
+   - If found: use `{parentDir}/{repoName}` as the path.
+   - If NOT found: ask the user for the local path to the repo using `AskUserQuestion`: "Repo '{repoName}' not found at {parentDir}/{repoName}. Where is it cloned locally?"
+   - If the user provides a custom path: verify it exists and contains `.git` via Bash. If not, warn and re-ask.
 
 5. Store the resolved `repoPath` for this story. Continue to Step 4.5.
 
@@ -405,7 +409,7 @@ If `singleStoryMode`: simplify the summary to just show the single story result.
 - Single-story mode: `/azdev-plan 42920` processes only story #42920 without multi-story summary
 - All-stories mode: `/azdev-plan` (no args) processes all assigned stories as before
 - Task/child ID argument resolves to parent story automatically
-- User is asked which repo each story belongs to (no automatic branch link resolution)
+- User selects repo from Azure DevOps project repos (fetched via list-repos)
 - Repo choice is stored in azdev-task-map.json for use during execution
 - Each story is interactively verified with the user before file generation (Step 5.5)
 - Verified analysis replaces the story description in Azure DevOps (Step 5.6)

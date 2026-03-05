@@ -96,7 +96,7 @@ Defaults to showing only your assigned items (`--me`). Use `--all` to see the en
 The main analysis pipeline. Run without arguments to plan all assigned stories, or pass a story ID to plan a single story (e.g., `/azdev-plan 42920`). It:
 
 1. Fetches your assigned stories from the current sprint
-2. Asks which local repo each story belongs to
+2. Shows Azure DevOps repos and asks which one each story belongs to
 3. Shows a summary (skipped in single-story mode)
 4. For each story, presents its analysis for your review and verification
 5. Updates story descriptions in Azure DevOps with the verified analysis
@@ -149,6 +149,9 @@ node azdev-tools.cjs create-branch --repo <path> --story-id <id> --title <title>
 
 # Push and create PR (via Azure DevOps REST API, linked to story)
 node azdev-tools.cjs create-pr --repo <path> --branch <name> --base <branch> --title <title> --body <body> --story-id <id> --cwd <path>
+
+# List project repositories
+node azdev-tools.cjs list-repos [--top <N>] --cwd <path>
 
 # Display sprint board (fetch + render in one command)
 node azdev-tools.cjs show-sprint [--me] --cwd <path>
