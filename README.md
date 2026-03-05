@@ -105,11 +105,11 @@ The main analysis pipeline. Run without arguments to plan all assigned stories, 
 
 ### `/azdev-execute`
 
-Execute the story spec for a single story. Creates a **feature branch** from develop, sets tasks to **Active**, implements the work described in the story spec, auto-resolves tasks and story when done, pushes the branch, and creates a **PR to develop** via the Azure DevOps REST API. Only asks for input when selecting between multiple stories or hitting implementation blockers.
+Execute the story spec for a single story. Creates a **feature branch** from develop, sets tasks to **Active**, implements the work described in the story spec, auto-resolves tasks and story when done, pushes the branch, and creates a **PR to develop** via the Azure DevOps REST API. The PR is automatically **linked to the Azure DevOps story** via `workItemRefs`. Only asks for input when selecting between multiple stories or hitting implementation blockers.
 
 ### `/azdev-execute-sprint`
 
-Fully autonomous mode — executes **all stories** in the task map sequentially without any user interaction. Each story gets its own feature branch and PR (created via Azure DevOps REST API). Errors on one story don't block the next. Outputs a full sprint summary with all PR links at the end.
+Fully autonomous mode — executes **all stories** in the task map sequentially without any user interaction. Each story gets its own feature branch and PR (created via Azure DevOps REST API, linked to the story). Errors on one story don't block the next. Outputs a full sprint summary with all PR links at the end.
 
 ## Status tracking
 
@@ -119,7 +119,7 @@ The `azdev-task-map.json` file maps Azure DevOps task IDs to local repos. During
 - **Complete work** → set tasks to **Resolved**
 - **Check story** → use `get-child-states` to verify all children are done before resolving the story
 
-Status updates use the Azure DevOps REST API and require the `vso.work_write` PAT scope.
+PRs are created via the Azure DevOps REST API and automatically linked to the parent story. Status updates require the `vso.work_write` PAT scope, and PR creation requires `vso.code`.
 
 ## Helper script CLI
 
