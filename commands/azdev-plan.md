@@ -186,14 +186,16 @@ The verified understanding per story is used in later steps for project file gen
 
 For each verified story, **replace** the description with the verified analysis. Azure DevOps keeps revision history, so the original description is not lost.
 
-Construct the new description HTML:
-```html
-<strong>Arbejdstype:</strong> {Code change/Manual/operational/Blocked}<br>
-<strong>Opsummering:</strong> {verified understanding text}<br>
-<strong>Opgaver:</strong><br>
-{for each child task: "- {task.title} ({task.state})<br>"}
-<br>
-<em>Sprint-analyse verificeret {today's date}</em>
+Construct the new description in markdown:
+```markdown
+**Arbejdstype:** {Code change/Manual/operational/Blocked}
+
+**Opsummering:** {verified understanding text}
+
+**Opgaver:**
+{for each child task: "- {task.title} ({task.state})"}
+
+*Sprint-analyse verificeret {today's date}*
 ```
 
 Then run:
