@@ -100,6 +100,8 @@ The main analysis pipeline. Run without arguments to plan all assigned stories, 
 8. **User approval** — shows the full spec for approve/changes/skip
 9. **Task map** — writes/merges `.planning/azdev-task-map.json` mapping story IDs → repos → task IDs for status tracking during execution
 
+**Research mode:** Stories tagged with `research` in Azure DevOps get a deeper treatment — broader codebase exploration, a multi-round dialogue where you discuss findings and possible approaches together, and a STORY.md that includes a "Research Findings" section with problem analysis, approaches considered, and the agreed approach. Acceptance criteria focus on what to investigate or prototype rather than what to build.
+
 ### `/azdev-execute [story-id]`
 
 Execute story plans. Two modes depending on arguments:
