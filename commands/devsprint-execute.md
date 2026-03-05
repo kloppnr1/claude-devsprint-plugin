@@ -140,7 +140,8 @@ Launch an Agent with the full execution instructions for this single story (Step
 - All devsprint-tools.cjs CLI contracts needed (update-state, get-child-states, create-branch, create-pr)
 - The TDD workflow (RED → GREEN → REFACTOR)
 - Instruction to NEVER use AskUserQuestion (autonomous mode)
-- Instruction to return a JSON summary: `{"storyId": N, "status": "completed|partial|skipped", "branch": "...", "prUrl": "...", "tasksResolved": [...], "tasksRemaining": [...], "error": "..."}`
+- Instruction to run the FULL test suite (`dotnet test` / `npm test` / `pytest`) after all implementation — not just new tests. All tests must pass before resolving tasks.
+- Instruction to return a JSON summary: `{"storyId": N, "status": "completed|partial|skipped", "branch": "...", "prUrl": "...", "tasksResolved": [...], "tasksRemaining": [...], "testsPassed": N, "testsFailed": N, "testCommand": "...", "testSuiteStatus": "all passed|failures|no test infrastructure", "error": "..."}`
 
 Do NOT run agents in background — run them sequentially so each story completes before the next starts. Parse the agent's returned summary and add to `executionResults`.
 
@@ -233,12 +234,22 @@ Execute Steps 4a–4h below. In `all` mode (inside agent): if any step encounter
 
      Repeat the RED→GREEN→REFACTOR cycle for each task or logical unit of work.
 
-  4. **Final test run**: After all work is complete, run the full test suite:
-     - .NET: `dotnet test` (from solution root)
-     - Node/TypeScript: `npm test` or `npx vitest run`
-     - Python: `pytest`
-     - ALL tests must pass (new and existing). Do NOT proceed to task resolution with failing tests.
-     - If the project has no test infrastructure, run the build command to verify compilation.
+  4. **MANDATORY — Full test suite run:**
+
+     After all TDD cycles are complete, you MUST run the **entire** project test suite — not just the tests you wrote. This catches regressions.
+
+     - .NET: `dotnet test` (from solution root — runs ALL test projects)
+     - Node/TypeScript: `npm test` or `npx vitest run` (runs ALL tests)
+     - Python: `pytest` (runs ALL tests)
+     - If the project has no test infrastructure: run the build command (`dotnet build`, `npm run build`, etc.) to verify compilation.
+
+     **ALL tests must pass (new AND existing).** Do NOT proceed to Step 4f (task resolution) if any test fails. Fix failures first.
+
+     Capture and store the test results for the summary:
+     - `testsPassed`: total number of passing tests
+     - `testsFailed`: total number of failing tests
+     - `testCommand`: the command that was run (e.g., `dotnet test`)
+     - `testSuiteStatus`: "all passed" | "failures" | "no test infrastructure"
 
   5. **Match tasks to work**: As you complete work that corresponds to a specific Azure DevOps task (from `taskTitles`), note which tasks have been completed.
 
@@ -321,6 +332,7 @@ Stories processed: {total}
   {status icon} #{storyId} — {storyTitle}
      Branch: {branchName}
      Tasks: {resolvedCount}/{totalCount} resolved
+     Tests: {testsPassed} passed, {testsFailed} failed ({testCommand}) — {testSuiteStatus}
      Story: {Resolved ✓ | Active (X tasks remaining)}
      PR: {prUrl | "not created — {reason}"}
 {end for}
@@ -383,5 +395,8 @@ Next steps:
 - Each story gets a PR linked to the Azure DevOps story
 - In `all` mode: errors on one story do not block the next
 - In `single` mode: user is consulted on blockers
-- Clear summary with PR links at the end
+- Full test suite (`dotnet test` / `npm test`) runs after implementation — not just new tests
+- Test results (passed/failed counts) are included in the summary output
+- Tasks are NOT resolved if the full test suite has failures
+- Clear summary with PR links and test results at the end
 </success_criteria>
