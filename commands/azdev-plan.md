@@ -115,19 +115,29 @@ After resolving the target repo for each story, analyze the repo to understand t
 
 For each story with a resolved local repo path:
 
-1. **Switch to the target repo directory** and look at the repo structure:
-   - Look at key directories, tech stack indicators (package.json, *.csproj, *.sln, etc.).
+1. **Switch to the target repo directory** and map the repo structure:
+   - Identify tech stack from project files (package.json, *.csproj, *.sln, Cargo.toml, etc.).
    - Run `git branch -a` to see available branches.
+   - Map top-level directory structure to understand architecture layers.
 
-2. **Check for existing work:** Check if a feature branch for this story already exists:
+2. **Targeted code search based on story keywords:**
+   - Extract key nouns from the story title, description, and task titles (e.g., "prisområde", "faktura", "blob storage").
+   - Use `grep -r` or equivalent to find files/classes matching those keywords in the repo.
+   - For each match: **read the file** (or relevant section) to understand what it does and how it relates to the story.
+   - Follow imports and references to map the relevant code flow (e.g., Controller → Service → Repository).
+   - Goal: identify the **specific files that will need changes**, not just the general architecture.
+
+3. **Check for existing work:** Check if a feature branch for this story already exists:
    - Run `git branch -a | grep -i {storyId}` to find branches matching the story ID.
    - If a matching branch exists, get the diff against the default branch to see existing progress.
 
-3. **Produce a repo analysis summary** for each story:
-   - **Tech stack**: detected from repo (e.g., "C# / .NET", "TypeScript / React", "Python / FastAPI")
+4. **Produce a repo analysis summary** for each story:
+   - **Tech stack**: detected from repo (e.g., "C# / .NET 8", "TypeScript / React 18", "Python / FastAPI")
+   - **Key files**: specific files/classes that are relevant to this story, with a one-line description of each (e.g., "`src/Services/PriceAreaService.cs` — resolves DK1/DK2 based on postal code")
+   - **Code flow**: the path through the codebase that this story touches (e.g., "PriceController.GetArea() → PriceAreaService.Resolve() → PostalCodeRepository.Lookup()")
    - **Architecture observations**: key patterns or layers in the repo (e.g., "API controller + service layer + DB migration")
    - **Existing branch**: if a feature branch for this story was found, note it and summarize progress
-   - **Risks or concerns**: anything notable (e.g., "large repo", "complex build setup")
+   - **Risks or concerns**: anything notable (e.g., "large repo", "complex build setup", "no existing tests for this area")
 
 Store this analysis per story — it is used in Step 5.5 for the interactive verification and in Steps 8-10 for project file generation.
 
@@ -172,6 +182,23 @@ For each story, present the following to the user:
 **Tasks:**
 {list of child tasks with their state}
 ```
+
+**Assess information completeness** before asking for confirmation. Check:
+- Does the story have enough detail to write a specific Goal? (not just a title)
+- Are there concrete acceptance criteria, or do they need to be derived?
+- Did the repo analysis find specific files, or is the relevant code unclear?
+- Are there implicit assumptions that should be made explicit?
+
+If information is insufficient, **ask targeted questions** instead of guessing:
+```
+I need more detail to write a good spec for #{id}:
+
+1. {specific question — e.g., "Which postal codes map to DK1 vs DK2?"}
+2. {specific question — e.g., "Should this be a new endpoint or extend the existing /prices?"}
+3. {specific question — e.g., "The repo has no tests — should I include test requirements?"}
+```
+
+Only proceed to confirmation when you have enough detail for every STORY.md section.
 
 Use `AskUserQuestion` with:
 - Question: "Is this understanding correct for #{id}?"
@@ -320,6 +347,23 @@ Formatting rules:
 - If the story has NO description and NO acceptance criteria, mark it clearly: "Insufficient detail — requires manual clarification before implementation."
 - Do NOT include any HTML tags in the generated file.
 - The "Open Questions & Blockers" section must NEVER be empty when the story description mentions unresolved items (e.g., "afklaring af...", "åbent:", "TBD", "TODO").
+
+**Step 10.5 — Self-review before presenting:**
+
+Before showing STORY.md to the user, run it through this checklist. Fix any issues silently before presenting.
+
+| Check | Pass criteria |
+|-------|--------------|
+| Goal is specific | Contains concrete nouns (file paths, feature names, systems) — not just "implement story" |
+| Acceptance criteria are testable | Each criterion describes an observable outcome, not a vague quality |
+| Key Files lists real paths | Every path was confirmed to exist during repo analysis |
+| Code flow is traced | At least one call chain is documented (A → B → C) |
+| No vague placeholders | No "{TBD}", "relevant files", "as needed", "etc." without specifics |
+| Open Questions captures unknowns | Everything marked "afklaring", "TBD", "TODO" in the source is listed here |
+| Out of Scope is explicit | At least one item, or "N/A — story is self-contained" |
+| Implementation Notes are actionable | An AI agent reading only this file could start coding without asking questions (except items in Open Questions) |
+
+If a check fails and the information exists (in the story, repo, or verified understanding), fix it. If the information doesn't exist, add it to Open Questions instead of guessing.
 
 **Step 11 — Present for approval:**
 
