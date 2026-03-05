@@ -59,7 +59,7 @@ Common patterns:
 - **Story with tasks**: "Implementer CSV-eksport: 1) Backend endpoint 2) Frontend knap 3) Tests" → 1 User Story + 3 Tasks
 - **Multiple stories**: User may describe several features → multiple User Stories
 - **Tasks under existing story**: "Tilføj tasks til #42920: test, deploy" → Tasks with --parent 42920
-- **Bug**: "Bug: faktura viser forkert beløb" → 1 Bug
+- **Bug**: "Bug: faktura viser forkert beløb" → 1 User Story (parent) + 1 Bug (child)
 
 If the argument references an existing story ID (e.g., "#42920" or "under 42920"), use that as the parent for tasks.
 
@@ -138,5 +138,5 @@ If the user chooses to plan: invoke `/devsprint-plan <storyId>` via the Skill to
 - Never create work items without user confirmation
 - If the user mentions an existing story ID as parent, use it directly (don't create a new story)
 - NEVER create Tasks under Bugs. Bugs are standalone work items with no children. Only User Stories can have child Tasks.
-- When creating a Bug, do NOT suggest tasks — just create the Bug alone.
+- Bugs MUST always have a parent User Story. Always create a User Story first, then create the Bug as its child.
 </rules>
