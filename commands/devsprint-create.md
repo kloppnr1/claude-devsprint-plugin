@@ -137,4 +137,6 @@ If the user chooses to plan: invoke `/devsprint-plan <storyId>` via the Skill to
 - Create stories before tasks (tasks need parent ID)
 - Never create work items without user confirmation
 - If the user mentions an existing story ID as parent, use it directly (don't create a new story)
+- NEVER create Tasks under Bugs. Bugs are standalone work items with no children. Only User Stories can have child Tasks.
+- When creating a Bug, do NOT suggest tasks — just create the Bug alone.
 </rules>
