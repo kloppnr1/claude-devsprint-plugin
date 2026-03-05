@@ -189,7 +189,13 @@ Execute Steps 4a–4h below. In `all` mode: if any step encounters a non-fatal e
   3. **For each piece of work**:
      - Read ONLY the specific files listed in the "Key Files" section or that you need to edit.
      - Implement the changes described in the implementation notes using Edit/Write tools.
-     - Run any tests or build commands if the project has them (check package.json scripts, Makefile, etc.).
+
+  **MANDATORY: Run all tests after implementation.** Detect the project type and run the appropriate test command:
+     - .NET: `dotnet test` (from solution root)
+     - Node/TypeScript: `npm test` or `npx vitest run` (check package.json scripts)
+     - Python: `pytest`
+     - If tests fail: fix the code and re-run until all tests pass. Do NOT proceed to task resolution with failing tests.
+     - If the project has no test infrastructure, run the build command (`dotnet build`, `npm run build`, etc.) to verify compilation.
 
   4. **Match tasks to work**: As you complete work that corresponds to a specific Azure DevOps task (from `taskTitles`), note which tasks have been completed.
 
