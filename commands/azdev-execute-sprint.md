@@ -1,7 +1,6 @@
 ---
 name: azdev-execute-sprint
 description: Execute all stories in the sprint backlog without interruption
-argument-hint: "[story-id]"
 allowed-tools:
   - Read
   - Write
@@ -88,13 +87,6 @@ This command runs FULLY AUTONOMOUSLY. Do NOT use AskUserQuestion at any point. I
    If the `mappings` array is empty: tell user "Task map has no story mappings. Run `/azdev-plan` and approve at least one repo." STOP completely.
 
 Store the full `mappings` array. Initialize an empty `sprintResults` list to collect per-story outcomes.
-
-**Step 1.5 — Parse arguments and filter mappings:**
-
-Check if the user passed a story ID as argument (e.g., `/azdev-execute-sprint 42920` or `/azdev-execute-sprint #42920`).
-
-- If a numeric ID is provided: filter `mappings` to only the entry matching that `storyId`. If no match found: "Story #{id} is not in the task map. Available stories: {list ids and titles}." STOP completely.
-- If no argument: use all mappings (execute entire sprint).
 
 Display:
 ```
