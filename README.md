@@ -36,17 +36,11 @@ Azure DevOps sprint integration for [Claude Code](https://docs.anthropic.com/en/
 ## Installation
 
 ```bash
-cp commands/azdev*.md ~/.claude/commands/
+git clone <this-repo> && cd claude-azdev-skill
+./install.sh
 ```
 
-Restart Claude Code. The `/azdev-*` commands are now available.
-
-Copy the Node.js helper script to Claude Code's bin directory:
-
-```bash
-mkdir -p ~/.claude/bin
-cp bin/azdev-tools.cjs ~/.claude/bin/
-```
+This copies commands and the helper script to `~/.claude/`. Restart Claude Code to pick up changes.
 
 ### Configure credentials
 
@@ -163,6 +157,7 @@ All commands output JSON to stdout and use exit code 0/1 for success/failure.
 
 ```
 claude-azdev-skill/
+├── install.sh                     # One-command installer
 ├── bin/
 │   └── azdev-tools.cjs          # Node.js helper — all Azure DevOps API calls
 ├── commands/
