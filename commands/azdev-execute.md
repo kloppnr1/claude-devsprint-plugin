@@ -14,7 +14,7 @@ allowed-tools:
 ---
 
 <objective>
-Execute the project plan for one or more analyzed stories. For each story: create a feature branch, navigate to the target repo, set tasks to Active in Azure DevOps, work through the ROADMAP.md phases using PROJECT.md and REQUIREMENTS.md as guidance, auto-resolve tasks and story when complete, and create a PR to develop.
+Execute the story spec for one or more analyzed stories. For each story: create a feature branch, navigate to the target repo, set tasks to Active in Azure DevOps, implement the work described in the story spec, auto-resolve tasks and story when complete, and create a PR to develop.
 </objective>
 
 <execution_context>
@@ -51,7 +51,7 @@ azdev-tools.cjs CLI contracts used by this command:
     -> stdout: JSON {"pr":"<url>","prId":N,"branch":"...","base":"...","pushed":true,"linked":true|false}
     -> exit 0 on success, exit 1 on error
 
-azdev-task-map.json structure (written by /azdev-analyze):
+azdev-task-map.json structure (written by /azdev-plan):
   {
     "version": 1,
     "sprintName": "Sprint 5",
@@ -137,13 +137,12 @@ This is the main implementation phase. The story spec (`stories/{current.storyId
 
 1. **Navigate to the target repo**: Use `{current.repoPath}` as the working directory for all file operations.
 
-2. **Follow the ROADMAP.md phases**: Execute each phase in order. The plan already describes exactly what to do.
+2. **Follow the story spec**: Use the acceptance criteria and implementation notes as your guide. The spec describes exactly what to do.
 
-3. **For each phase/plan**:
-   - Read ONLY the specific files you need to edit (the plan tells you which ones).
-   - Implement the changes described in the plan using Edit/Write tools.
+3. **For each piece of work**:
+   - Read ONLY the specific files listed in the "Key Files" section or that you need to edit.
+   - Implement the changes described in the implementation notes using Edit/Write tools.
    - Run any tests or build commands if the project has them (check package.json scripts, Makefile, etc.).
-   - After implementing a plan, update ROADMAP.md to mark it complete (change `- [ ]` to `- [x]`).
 
 4. **Match tasks to work**: As you complete work that corresponds to a specific Azure DevOps task (from `current.taskTitles`), note which tasks have been completed.
 
@@ -151,7 +150,7 @@ This is the main implementation phase. The story spec (`stories/{current.storyId
 
 6. **Commit changes**: After meaningful chunks of work, commit changes via git. Use descriptive commit messages referencing the story ID (e.g., "feat: implement API endpoint for #{storyId}"). Do NOT ask the user — just commit directly on the feature branch.
 
-IMPORTANT: Do NOT spend time exploring or understanding the codebase broadly. The `/azdev-plan` command already did that analysis and wrote the project plans. Trust the plans. Only read files that you are about to modify.
+IMPORTANT: Do NOT spend time exploring or understanding the codebase broadly. The `/azdev-plan` command already did that analysis and wrote the story spec. Trust the spec. Only read files that you are about to modify.
 
 **Step 7 — Auto-resolve activated tasks:**
 
@@ -195,7 +194,7 @@ Build a PR body string containing:
 #{current.storyId} — {current.storyTitle}
 
 ## Changes
-{Brief summary of what was implemented, based on the ROADMAP.md phases completed}
+{Brief summary of what was implemented, based on the story spec}
 
 ## Tasks resolved
 - #{taskId} — {taskTitle}
@@ -250,7 +249,7 @@ Next steps:
 
 - Task map references a repo path that no longer exists: Warn the user and ask for the correct path. If user cannot provide one, skip that story.
 
-- PROJECT.md is missing but task map exists: The user may have deleted the project files. Tell them to re-run `/azdev-analyze` to regenerate.
+- Story spec is missing but task map exists: The user may have deleted the spec. Tell them to re-run `/azdev-plan {storyId}` to regenerate.
 
 - Git operations fail in target repo: Warn user with error details. Continue with implementation if possible, or ask user to resolve the git issue manually.
 
@@ -265,7 +264,7 @@ Next steps:
 - User selects which story to execute (or auto-selects if only one)
 - A feature branch is created from develop before any code changes
 - All child tasks are set to Active in Azure DevOps before implementation starts
-- Implementation follows the project plan (ROADMAP.md phases)
+- Implementation follows the story spec (acceptance criteria + implementation notes)
 - Tasks that were activated are automatically resolved after implementation — no user prompt
 - Parent story is automatically resolved when all child tasks are resolved — no user prompt
 - Feature branch is pushed and a PR to develop is created

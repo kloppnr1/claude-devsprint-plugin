@@ -20,7 +20,7 @@ Azure DevOps sprint integration for [Claude Code](https://docs.anthropic.com/en/
 
 1. **Connect** — Configure your Azure DevOps org, project, and Personal Access Token
 2. **View sprint** — Fetch the current sprint backlog with stories, tasks, descriptions, and acceptance criteria
-3. **Plan** — Run `/azdev-plan` to analyze stories, pick target repos, verify understanding with the user, update descriptions in Azure DevOps, and generate project plans (PROJECT.md + ROADMAP.md + REQUIREMENTS.md) in each target repo
+3. **Plan** — Run `/azdev-plan` to analyze stories, pick target repos, verify understanding with the user, update descriptions in Azure DevOps, and generate a story spec (`STORY.md`) in each target repo
 4. **Execute** — Navigate to target repos and implement. Task status updates (New → Active → Resolved) are tracked via `azdev-task-map.json`
 
 ## Prerequisites
@@ -100,12 +100,12 @@ The main analysis pipeline. Run without arguments to plan all assigned stories, 
 3. Shows a summary (skipped in single-story mode)
 4. For each story, presents its analysis for your review and verification
 5. Updates story descriptions in Azure DevOps with the verified analysis
-6. Generates PROJECT.md, ROADMAP.md, and REQUIREMENTS.md in each target repo
+6. Generates a story spec at `.planning/stories/{storyId}.md` in each target repo
 7. Writes/merges `.planning/azdev-task-map.json` — maps DevOps work item IDs to repos for status tracking
 
 ### `/azdev-execute`
 
-Execute the project plan for a single story. Creates a **feature branch** from develop, sets tasks to **Active**, works through the ROADMAP.md phases, auto-resolves tasks and story when done, pushes the branch, and creates a **PR to develop** via the Azure DevOps REST API. Only asks for input when selecting between multiple stories or hitting implementation blockers.
+Execute the story spec for a single story. Creates a **feature branch** from develop, sets tasks to **Active**, implements the work described in the story spec, auto-resolves tasks and story when done, pushes the branch, and creates a **PR to develop** via the Azure DevOps REST API. Only asks for input when selecting between multiple stories or hitting implementation blockers.
 
 ### `/azdev-execute-sprint`
 

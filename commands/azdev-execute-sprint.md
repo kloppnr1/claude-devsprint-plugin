@@ -49,7 +49,7 @@ azdev-tools.cjs CLI contracts used by this command:
     -> stdout: JSON {"pr":"<url>","prId":N,"branch":"...","base":"...","pushed":true,"linked":true|false}
     -> exit 0 on success, exit 1 on error
 
-azdev-task-map.json structure (written by /azdev-analyze):
+azdev-task-map.json structure (written by /azdev-plan):
   {
     "version": 1,
     "sprintName": "Sprint 5",
@@ -81,10 +81,10 @@ This command runs FULLY AUTONOMOUSLY. Do NOT use AskUserQuestion at any point. I
    If exit 1: tell user "No Azure DevOps config found. Run `/azdev-setup` to configure your connection." STOP completely.
 
 3. Check that `$CWD/.planning/azdev-task-map.json` exists via Bash `test -f`.
-   If missing: tell user "No task map found. Run `/azdev-analyze` first." STOP completely.
+   If missing: tell user "No task map found. Run `/azdev-plan` first." STOP completely.
 
 4. Read `$CWD/.planning/azdev-task-map.json` using the Read tool. Parse the JSON.
-   If the `mappings` array is empty: tell user "Task map has no story mappings. Run `/azdev-analyze` and approve at least one repo." STOP completely.
+   If the `mappings` array is empty: tell user "Task map has no story mappings. Run `/azdev-plan` and approve at least one repo." STOP completely.
 
 Store the full `mappings` array. Initialize an empty `sprintResults` list to collect per-story outcomes.
 
