@@ -5,10 +5,11 @@ Azure DevOps sprint integration for [Claude Code](https://docs.anthropic.com/en/
 ## Quick overview
 
 ```
-/azdev-setup            →  Connect to Azure DevOps (one-time)
-/azdev-sprint           →  See your sprint backlog (default: your items, --all for everything)
-/azdev-plan [story-id]   →  Analyze stories → pick repos → verify → generate plans
-/azdev-execute [story-id] → Execute one story (interactive) or all stories (autonomous)
+/azdev-setup              →  Connect to Azure DevOps (one-time)
+/azdev-sprint             →  See your sprint backlog (default: your items, --all for everything)
+/azdev-plan [story-id]    →  Analyze stories → pick repos → verify → generate plans
+/azdev-execute [story-id] →  Execute one story (interactive) or all stories (autonomous)
+/azdev-create <description> → Create stories & tasks from natural language
 ```
 
 **The typical workflow:**
@@ -101,6 +102,15 @@ The main analysis pipeline. Run without arguments to plan all assigned stories, 
 9. **Task map** — writes/merges `.planning/azdev-task-map.json` mapping story IDs → repos → task IDs for status tracking during execution
 
 **Research mode:** Stories tagged with `research` in Azure DevOps get a deeper treatment — broader codebase exploration, a multi-round dialogue where you discuss findings and possible approaches together, and a STORY.md that includes a "Research Findings" section with problem analysis, approaches considered, and the agreed approach. Acceptance criteria focus on what to investigate or prototype rather than what to build.
+
+### `/azdev-create <description>`
+
+Create stories and tasks from a natural language description. Parses your intent, shows a plan for confirmation, then creates work items via the Azure DevOps API — all assigned to the current sprint.
+
+Examples:
+- `/azdev-create Tilføj prisområde-kolonne til kundelisten` — creates a single User Story
+- `/azdev-create Implementer CSV-eksport: 1) Backend endpoint 2) Frontend knap 3) Tests` — creates a story with 3 tasks
+- `/azdev-create Tilføj tasks til #42920: test, deploy` — creates tasks under an existing story
 
 ### `/azdev-execute [story-id]`
 
