@@ -562,6 +562,22 @@ Next steps:
 
 If `singleStoryMode`: simplify the summary to just show the single story result.
 
+**Step 13 — Prompt to start execution:**
+
+After displaying the final summary, immediately prompt the user to start execution. The prompt depends on which mode was used:
+
+**If `singleStoryMode`** (planned a single story):
+- Ask: "Start execute for #{targetStoryId}?"
+- Options: "Yes — execute now" / "No — I'm done for now"
+- If yes: run `/devsprint-execute {targetStoryId}` via the Skill tool.
+- If no: end with "Planning complete. Run `/devsprint-execute {targetStoryId}` when you're ready."
+
+**If all-stories mode** (planned the full sprint):
+- Ask: "Start executing the full sprint?"
+- Options: "Yes — execute all stories" / "No — I'm done for now"
+- If yes: run `/devsprint-execute` (no argument) via the Skill tool to execute the full sprint.
+- If no: end with "Planning complete. Run `/devsprint-execute` when you're ready."
+
 </process>
 
 <error_handling>

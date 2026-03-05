@@ -122,6 +122,9 @@ Initialize an empty `executionResults` list to collect per-story outcomes.
 
 **Step 4 — Execute each story:**
 
+**CRITICAL — Context isolation in `all` mode:**
+In `all` mode, each story MUST be executed inside its own Agent (subagent_type: `general-purpose`) to prevent context window exhaustion. The orchestrator stays lightweight — it only launches agents and collects results.
+
 For each mapping in `storiesToExecute` (index `i`, starting at 1):
 
 Display:
@@ -129,7 +132,24 @@ Display:
 ━━━ [{i}/{total}] Story #{storyId} — {storyTitle} ━━━
 ```
 
-Execute Steps 4a–4h below. In `all` mode: if any step encounters a non-fatal error, log it and continue to the next step or next story. In `single` mode: stop on errors and consult the user.
+**If `mode === "all"`:**
+Launch an Agent with the full execution instructions for this single story (Steps 4a–4h). The agent prompt must include:
+- The story mapping (storyId, storyTitle, repoPath, taskIds, taskTitles)
+- The path to the story spec: `{repoPath}/.planning/stories/{storyId}.md`
+- The path to the config: `$CWD/.planning/devsprint-config.json`
+- All devsprint-tools.cjs CLI contracts needed (update-state, get-child-states, create-branch, create-pr)
+- The TDD workflow (RED → GREEN → REFACTOR)
+- Instruction to NEVER use AskUserQuestion (autonomous mode)
+- Instruction to return a JSON summary: `{"storyId": N, "status": "completed|partial|skipped", "branch": "...", "prUrl": "...", "tasksResolved": [...], "tasksRemaining": [...], "error": "..."}`
+
+Do NOT run agents in background — run them sequentially so each story completes before the next starts. Parse the agent's returned summary and add to `executionResults`.
+
+**If `mode === "single"`:**
+Execute Steps 4a–4h directly in the main conversation (no agent needed — interactive mode benefits from direct user communication).
+
+Steps 4a–4h below describe the work the agent (or main conversation in single mode) performs:
+
+Execute Steps 4a–4h below. In `all` mode (inside agent): if any step encounters a non-fatal error, log it and continue to the next step. In `single` mode: stop on errors and consult the user.
 
   **Step 4a — Check story state:**
 
@@ -178,33 +198,56 @@ Execute Steps 4a–4h below. In `all` mode: if any step encounters a non-fatal e
     #{taskId} ({taskTitle}): already Active (skipped)
   ```
 
-  **Step 4e — Execute the work:**
+  **Step 4e — Execute the work (TDD approach):**
 
-  This is the main implementation phase. The story spec contains everything needed: goal, acceptance criteria, key files, implementation notes, and open questions. Do NOT re-analyze the codebase.
+  This is the main implementation phase using **Test-Driven Development**. The story spec contains everything needed: goal, acceptance criteria, key files, implementation notes, and open questions. Do NOT re-analyze the codebase.
 
   1. **Navigate to the target repo**: Use `{repoPath}` as the working directory for all file operations.
 
   2. **Follow the story spec**: Use the acceptance criteria and implementation notes as your guide.
 
-  3. **For each piece of work**:
-     - Read ONLY the specific files listed in the "Key Files" section or that you need to edit.
-     - Implement the changes described in the implementation notes using Edit/Write tools.
+  3. **TDD cycle — for each piece of work:**
 
-  **MANDATORY: Run all tests after implementation.** Detect the project type and run the appropriate test command:
+     **a. RED — Write failing tests first:**
+     - Derive test cases from the acceptance criteria and implementation notes in the story spec.
+     - Each acceptance criterion should map to at least one test.
+     - Write tests in the project's existing test framework and conventions:
+       - .NET: xUnit/NUnit in the existing Tests project (create test file if needed)
+       - Node/TypeScript: vitest/jest following existing test patterns
+       - Python: pytest following existing test patterns
+     - If no test project exists: create one following the repo's conventions.
+     - Read ONLY the specific files listed in "Key Files" or that you need to edit.
+     - Run the tests — they MUST fail (confirms the test is valid). If a test passes before implementation, the test is not testing new behavior — revise it.
+     - Commit the failing tests: `test: add tests for #{storyId} — {brief description}` (tests are committed separately so they exist as documentation even if implementation is incomplete).
+
+     **b. GREEN — Implement just enough to pass:**
+     - Implement the minimum code to make the failing tests pass.
+     - Follow the implementation notes from the story spec.
+     - Run all tests (new + existing) — all must pass.
+     - If tests fail: fix the implementation, NOT the tests (unless the test had a genuine bug).
+
+     **c. REFACTOR — Clean up if needed:**
+     - Only refactor if the implementation is clearly messy. Keep it minimal.
+     - Run tests again after refactoring to ensure nothing broke.
+     - Commit implementation: `feat: implement {description} for #{storyId}`
+
+     Repeat the RED→GREEN→REFACTOR cycle for each task or logical unit of work.
+
+  4. **Final test run**: After all work is complete, run the full test suite:
      - .NET: `dotnet test` (from solution root)
-     - Node/TypeScript: `npm test` or `npx vitest run` (check package.json scripts)
+     - Node/TypeScript: `npm test` or `npx vitest run`
      - Python: `pytest`
-     - If tests fail: fix the code and re-run until all tests pass. Do NOT proceed to task resolution with failing tests.
-     - If the project has no test infrastructure, run the build command (`dotnet build`, `npm run build`, etc.) to verify compilation.
+     - ALL tests must pass (new and existing). Do NOT proceed to task resolution with failing tests.
+     - If the project has no test infrastructure, run the build command to verify compilation.
 
-  4. **Match tasks to work**: As you complete work that corresponds to a specific Azure DevOps task (from `taskTitles`), note which tasks have been completed.
+  5. **Match tasks to work**: As you complete work that corresponds to a specific Azure DevOps task (from `taskTitles`), note which tasks have been completed.
 
-  5. **Handle blockers**:
+  6. **Handle blockers**:
      - `single` mode: use `AskUserQuestion` to consult the user. Do not guess at requirements.
      - `all` mode: make your best judgment call and proceed. Log any assumptions. Do NOT ask the user.
      - If the story spec has "Open Questions & Blockers": skip blocked items, implement what you can.
 
-  6. **Commit changes**: After meaningful chunks of work, commit changes via git. Use descriptive commit messages referencing the story ID (e.g., "feat: implement API endpoint for #{storyId}"). Do NOT ask — just commit directly on the feature branch.
+  7. **Commit changes**: Tests and implementation should already be committed from the TDD cycles above. If any uncommitted changes remain, commit them with descriptive messages referencing the story ID.
 
   IMPORTANT: Do NOT spend time exploring or understanding the codebase broadly. The `/devsprint-plan` command already did that analysis and wrote the story spec. Trust the spec. Only read files that you are about to modify.
 
