@@ -155,6 +155,16 @@ node azdev-tools.cjs list-repos [--top <N>] --cwd <path>
 
 # Display sprint board (fetch + render in one command)
 node azdev-tools.cjs show-sprint [--me] --cwd <path>
+
+# Create work items (User Story, Task, Bug, Feature, Epic)
+node azdev-tools.cjs create-work-item --type <type> --title "<title>" [--description "<html>"] [--parent <id>] [--sprint] [--assigned-to "<name>"] [--area "<path>"] [--tags "<tags>"] --cwd <path>
+
+# Comments on work items
+node azdev-tools.cjs add-comment --id <workItemId> --text "<html>" --cwd <path>
+node azdev-tools.cjs delete-comment --id <workItemId> --comment-id <commentId> --cwd <path>
+
+# Update acceptance criteria
+node azdev-tools.cjs update-acceptance-criteria --id <workItemId> --criteria "<html>" --cwd <path>
 ```
 
 All commands output JSON to stdout and use exit code 0/1 for success/failure.
@@ -171,7 +181,8 @@ claude-azdev-skill/
 │   ├── azdev-test.md             # /azdev-test — connection verification
 │   ├── azdev-sprint.md           # /azdev-sprint — sprint backlog display
 │   ├── azdev-plan.md             # /azdev-plan — story analysis & project bootstrap
-│   └── azdev-execute.md          # /azdev-execute — story execution (single or all)
+│   ├── azdev-execute.md          # /azdev-execute — story execution (single or all)
+│   └── azdev-create.md           # /azdev-create — create stories & tasks from natural language
 └── README.md
 ```
 

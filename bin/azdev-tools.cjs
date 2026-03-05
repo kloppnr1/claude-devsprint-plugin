@@ -100,6 +100,14 @@
  *     Deletes a comment from a work item.
  *     stdout: JSON {"status":"deleted","id":N,"commentId":N}
  *     Exit 0 on success, exit 1 on error.
+ *
+ *   create-work-item --type <type> --title <title> [--description "<html>"] [--parent <id>] [--sprint] [--assigned-to "<name>"] [--area "<path>"] [--tags "<comma-separated>"] [--cwd <path>]
+ *     Creates a new work item (User Story, Task, Bug, Feature, or Epic).
+ *     Uses POST to _apis/wit/workitems/$<type> with JSON Patch body.
+ *     --sprint: assigns to current active sprint iteration.
+ *     --parent: links the new item as a child of the given work item ID.
+ *     stdout: JSON {"status":"created","id":N,"type":"...","title":"...","url":"..."}
+ *     Exit 0 on success, exit 1 on error.
  */
 
 'use strict';
@@ -1591,6 +1599,132 @@ async function cmdCreatePr(cwd, args) {
  * @param {string} cwd - Working directory for loading Azure DevOps config
  * @param {string[]} args - CLI args
  */
+/**
+ * Handles the create-work-item command.
+ * Creates a new work item (User Story or Task) in Azure DevOps.
+ * Optionally assigns to current sprint and links to a parent work item.
+ *
+ * Required args: --type <type> --title <title>
+ * Optional args: --description <html>, --parent <id>, --sprint (assign to current sprint),
+ *                --assigned-to <name>, --area <path>, --tags <comma-separated>
+ *
+ * stdout: JSON {"status":"created","id":N,"type":"...","title":"...","url":"..."}
+ * Exit 0 on success, exit 1 on error.
+ *
+ * @param {string} cwd - Working directory
+ * @param {string[]} args - CLI args after the command name
+ */
+async function cmdCreateWorkItem(cwd, args) {
+  const typeIdx = args.indexOf('--type');
+  const titleIdx = args.indexOf('--title');
+  const descIdx = args.indexOf('--description');
+  const parentIdx = args.indexOf('--parent');
+  const assignedIdx = args.indexOf('--assigned-to');
+  const areaIdx = args.indexOf('--area');
+  const tagsIdx = args.indexOf('--tags');
+  const useSprint = args.includes('--sprint');
+
+  const type = typeIdx !== -1 ? args[typeIdx + 1] : null;
+  const title = titleIdx !== -1 ? args[titleIdx + 1] : null;
+  const description = descIdx !== -1 ? args[descIdx + 1] : null;
+  const parentId = parentIdx !== -1 ? args[parentIdx + 1] : null;
+  const assignedTo = assignedIdx !== -1 ? args[assignedIdx + 1] : null;
+  const area = areaIdx !== -1 ? args[areaIdx + 1] : null;
+  const tags = tagsIdx !== -1 ? args[tagsIdx + 1] : null;
+
+  const missing = [];
+  if (!type) missing.push('--type');
+  if (!title) missing.push('--title');
+
+  if (missing.length > 0) {
+    console.error(`Missing required arguments: ${missing.join(', ')}`);
+    console.error('Usage: azdev-tools.cjs create-work-item --type <"User Story"|"Task"|"Bug"> --title "<title>" [--description "<html>"] [--parent <id>] [--sprint] [--assigned-to "<name>"] [--area "<path>"] [--tags "<comma-separated>"]');
+    process.exit(1);
+  }
+
+  // Validate type
+  const validTypes = ['User Story', 'Task', 'Bug', 'Feature', 'Epic'];
+  if (!validTypes.includes(type)) {
+    console.error(`Invalid work item type: "${type}". Valid types: ${validTypes.join(', ')}`);
+    process.exit(1);
+  }
+
+  try {
+    const cfg = loadConfig(cwd);
+    const encodedPat = Buffer.from(':' + cfg.pat).toString('base64');
+
+    // Build JSON Patch body
+    const patchBody = [
+      { op: 'add', path: '/fields/System.Title', value: title },
+    ];
+
+    if (description) {
+      patchBody.push({ op: 'add', path: '/fields/System.Description', value: description });
+    }
+
+    if (assignedTo) {
+      patchBody.push({ op: 'add', path: '/fields/System.AssignedTo', value: assignedTo });
+    }
+
+    if (area) {
+      patchBody.push({ op: 'add', path: '/fields/System.AreaPath', value: area });
+    }
+
+    if (tags) {
+      patchBody.push({ op: 'add', path: '/fields/System.Tags', value: tags });
+    }
+
+    // Assign to current sprint if requested
+    if (useSprint) {
+      const teamName = cfg.team || await resolveTeamName(cfg.org, cfg.project, encodedPat);
+      const iterationsUrl = `${cfg.org}/${cfg.project}/${encodeURIComponent(teamName)}/_apis/work/teamsettings/iterations?$timeframe=current&api-version=7.1`;
+      const iterRes = await makeRequest(iterationsUrl, encodedPat);
+      if (iterRes.status === 200) {
+        const iterData = JSON.parse(iterRes.body);
+        if (iterData.value && iterData.value.length > 0) {
+          patchBody.push({ op: 'add', path: '/fields/System.IterationPath', value: iterData.value[0].path });
+        }
+      }
+    }
+
+    // Link to parent work item
+    if (parentId) {
+      patchBody.push({
+        op: 'add',
+        path: '/relations/-',
+        value: {
+          rel: 'System.LinkTypes.Hierarchy-Reverse',
+          url: `${cfg.org}/${cfg.project}/_apis/wit/workitems/${parentId}`,
+        },
+      });
+    }
+
+    // Create work item via POST with json-patch+json
+    const encodedType = encodeURIComponent(type);
+    const createUrl = `${cfg.org}/${cfg.project}/_apis/wit/workitems/$${encodedType}?api-version=7.1`;
+    const res = await makePatchRequest(createUrl, encodedPat, patchBody);
+
+    if (res.status === 200) {
+      const created = JSON.parse(res.body);
+      const webUrl = created._links && created._links.html ? created._links.html.href : '';
+      console.log(JSON.stringify({
+        status: 'created',
+        id: created.id,
+        type: type,
+        title: title,
+        url: webUrl,
+      }));
+      process.exit(0);
+    } else {
+      const errorBody = res.body ? JSON.parse(res.body) : {};
+      throw new Error(`Failed to create work item: HTTP ${res.status} — ${errorBody.message || res.body}`);
+    }
+  } catch (err) {
+    console.error(err.message);
+    process.exit(1);
+  }
+}
+
 async function cmdListRepos(cwd, args) {
   const topIdx = args.indexOf('--top');
   const top = topIdx !== -1 ? parseInt(args[topIdx + 1], 10) : 20;
@@ -1727,6 +1861,11 @@ async function main() {
     console.error('  delete-comment --id <workItemId> --comment-id <commentId>');
     console.error('               Delete a comment from a work item');
     console.error('               stdout: JSON {status, id, commentId}');
+    console.error('');
+    console.error('  create-work-item --type <type> --title <title> [--description "<html>"] [--parent <id>] [--sprint] [--assigned-to "<name>"] [--area "<path>"] [--tags "<comma-separated>"]');
+    console.error('               Create a new work item (User Story, Task, Bug, Feature, Epic)');
+    console.error('               --sprint: assign to current sprint, --parent: link as child');
+    console.error('               stdout: JSON {status, id, type, title, url}');
     process.exit(1);
   }
 
@@ -1797,9 +1936,13 @@ async function main() {
       await cmdDeleteComment(cwd, cmdArgs);
       break;
 
+    case 'create-work-item':
+      await cmdCreateWorkItem(cwd, cmdArgs);
+      break;
+
     default:
       console.error(`Unknown command: ${command}`);
-      console.error('Available commands: save-config, load-config, test, get-sprint, get-sprint-items, get-branch-links, update-description, update-acceptance-criteria, update-state, get-child-states, create-branch, create-pr, show-sprint, list-repos, add-comment, delete-comment');
+      console.error('Available commands: save-config, load-config, test, get-sprint, get-sprint-items, get-branch-links, update-description, update-acceptance-criteria, update-state, get-child-states, create-branch, create-pr, show-sprint, list-repos, add-comment, delete-comment, create-work-item');
       process.exit(1);
   }
 }
