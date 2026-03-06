@@ -8,6 +8,11 @@ allowed-tools:
   - Skill
 ---
 
+<feedback_rule>
+**CRITICAL — Free-text feedback rule:**
+When the user chooses "Edit" or any option meaning "change something", respond with plain text "Hvad vil du ændre?" and STOP. Wait for their free-text reply. Do NOT use `AskUserQuestion` with multiple-choice guesses — that creates frustrating loops. Only use `AskUserQuestion` for structured choices (yes/no, pick from a list), never for open-ended feedback.
+</feedback_rule>
+
 <objective>
 Create User Stories and Tasks in Azure DevOps from a natural language description. Parses the user's intent, creates work items via the API, and links tasks to their parent stories. All items are assigned to the current sprint.
 </objective>
@@ -85,7 +90,7 @@ All items will be assigned to the current sprint.
 Use `AskUserQuestion` with options: "Create" / "Edit" / "Cancel"
 
 - **Create**: proceed to Step 4.
-- **Edit**: ask what to change, update the plan, re-present.
+- **Edit**: respond with plain text "Hvad vil du ændre?" and STOP. Wait for the user's free-text reply (do NOT use AskUserQuestion). Then update the plan, re-present for confirmation.
 - **Cancel**: stop.
 
 **Step 4 — Create work items:**

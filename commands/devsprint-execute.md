@@ -13,6 +13,11 @@ allowed-tools:
   - Agent
 ---
 
+<feedback_rule>
+**CRITICAL — Free-text feedback rule:**
+When the user needs to provide open-ended feedback or corrections, respond with a plain-text question and STOP. Wait for their free-text reply. Do NOT use `AskUserQuestion` with multiple-choice guesses for open-ended input — that creates frustrating loops. Only use `AskUserQuestion` for structured choices (yes/no, pick from a list).
+</feedback_rule>
+
 <objective>
 Execute one or all stories from the task map. For each story: create a feature branch, activate tasks in Azure DevOps, implement the work from the story spec, auto-resolve tasks and story, push, and create a PR.
 

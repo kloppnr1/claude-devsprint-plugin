@@ -9,6 +9,11 @@ allowed-tools:
   - AskUserQuestion
 ---
 
+<feedback_rule>
+**CRITICAL — Free-text feedback rule:**
+When the user chooses an option that means "change something" / "correct something" / "edit" (e.g., "Ændringer", "No, let me correct it", "Edit"), you MUST respond with a single plain-text question like "Hvad vil du ændre?" and then STOP and WAIT for the user's free-text reply. Do NOT use `AskUserQuestion` with multiple-choice options to guess what they want to change — that creates frustrating loops. Only use `AskUserQuestion` for structured choices (yes/no, pick from a list), never for open-ended feedback collection.
+</feedback_rule>
+
 <objective>
 Fetch assigned stories from the current Azure DevOps sprint, ask the user which repo each story belongs to, interactively verify each story with the user, update story descriptions in Azure DevOps, generate a detailed STORY.md spec per story (optimized for both human reading and AI-driven implementation), and present each for user approval. Write devsprint-task-map.json for status tracking during execution.
 
@@ -276,7 +281,7 @@ Use `AskUserQuestion` with:
 - Options: "Yes" / "No, let me correct it"
 
 If "Yes": store the verified understanding (summary text + work type) for this story.
-If "No, let me correct it": ask "What is the correct understanding?" as a free-text follow-up. Then re-present the corrected version for confirmation. Repeat until approved.
+If "No, let me correct it": respond with plain text "Hvad skal rettes?" and STOP. Wait for the user's free-text reply (do NOT use AskUserQuestion — let them type freely). Then incorporate their feedback, re-present the corrected version, and confirm again. Repeat until approved.
 
 The verified understanding per story is used in later steps for project file generation.
 
@@ -493,7 +498,7 @@ STORY.md has been written to {repoPath}/.planning/stories/{storyId}.md
 Approve, request changes, or skip? (approve/changes/skip)"
 
 - If "approve": keep the file, post spec to Azure DevOps (Step 11.1), then move to next story.
-- If "changes": ask "What would you like to change?" then regenerate incorporating the feedback, and re-present for approval. Repeat until approved or skipped.
+- If "changes": respond with plain text "Hvad vil du ændre?" and STOP. Wait for the user's free-text reply (do NOT use AskUserQuestion — let them type freely). Then regenerate incorporating the feedback, and re-present for approval. Repeat until approved or skipped.
 - If "skip": delete the file. Note the skip in the final summary.
 
 **Step 11.1 — Post spec as Azure DevOps comment:**
