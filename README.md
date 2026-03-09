@@ -18,139 +18,102 @@ Zero external dependencies. Just Node.js built-ins and the Azure DevOps REST API
 
 ## What it looks like
 
-### View your sprint board
+End-to-end example: create a story, plan it, and execute — three commands.
 
 ```
-> /devsprint-sprint
-
-━━━ Sprint: Sprint 12 ━━━
-Dates:     2026-03-02 → 2026-03-13
-Items:     8
-
-┌─ [US] #1201 — Add price area column to customer list
-│  State: ACTIVE  │  Assigned: Alex Chen
-│
-│   ■ #1202 — Backend: Add price area field to API response  [DONE]
-│   ■ #1203 — Frontend: Display price area in customer table [NEW]
-│   ■ #1204 — Tests: Price area resolution logic             [NEW]
-└──────
-
-┌─ [US] #1205 — CSV export of customer data
-│  State: NEW  │  Assigned: Alex Chen
-│
-│   ■ #1206 — Backend: CSV endpoint                          [NEW]
-│   ■ #1207 — Frontend: Download button                      [NEW]
-│   ■ #1208 — Tests: CSV generation                          [NEW]
-└──────
-```
-
-### Create stories from natural language
-
-```
-> /devsprint-create Add CSV export: 1) Backend endpoint 2) Frontend button 3) Tests
+> /devsprint-create Add dark mode toggle: 1) Backend user preference 2) Frontend toggle 3) Tests
 
 Creating:
-  [User Story] "Add CSV export of customer data"
-    [Task] "Backend: Create CSV endpoint"
-    [Task] "Frontend: Add download button"
-    [Task] "Tests: CSV generation and download"
+  [User Story] "Add dark mode toggle to settings page"
+    [Task] "Backend: Store dark mode preference in user profile"
+    [Task] "Frontend: Add toggle switch to settings page"
+    [Task] "Tests: Dark mode preference persistence and UI toggle"
 
-╔══════════════════════════════════════════╗
-║  Story #1205 created                     ║
-╚══════════════════════════════════════════╝
+╔══════════════════════════════════════════════════════╗
+║  Story #3040 created                                 ║
+╚══════════════════════════════════════════════════════╝
 
-  ✓ #1205 [User Story] "Add CSV export of customer data"
-    ✓ #1206 [Task] "Backend: Create CSV endpoint"
-    ✓ #1207 [Task] "Frontend: Add download button"
-    ✓ #1208 [Task] "Tests: CSV generation and download"
+  ✓ #3040 [User Story] "Add dark mode toggle to settings page"
+    ✓ #3041 [Task] "Backend: Store dark mode preference in user profile"
+    ✓ #3042 [Task] "Frontend: Add toggle switch to settings page"
+    ✓ #3043 [Task] "Tests: Dark mode preference persistence and UI toggle"
 
-Sprint: Sprint 12
+Sprint: Sprint 7
 
-Next step: /devsprint-plan 1205 to analyze and create spec.
+Next step: /devsprint-plan 3040 to analyze and create spec.
 ```
 
-### Plan a story — analyze repo, generate spec
-
 ```
-> /devsprint-plan 1205
+> /devsprint-plan 3040
 
-=== Analysis: Sprint 12 ===
+#3040 → NorthwindApp (auto-detected)
 
-#1205 → ContosoCRM (from task map)
-
-### #1205 — CSV export of customer data (New)
+### #3040 — Add dark mode toggle to settings page (New)
 
 My understanding:
-  Export customer data as CSV from the web portal. Backend endpoint
-  returns CSV with configurable columns, frontend adds download button.
+  Allow users to switch between light and dark mode from their settings.
+  The preference is stored in the user profile and applied on login.
 
 Work type: Code change
-Target repo: ContosoCRM
+Target repo: NorthwindApp
 
 Repo analysis:
   Tech stack: C# / .NET 8 + React 18 / TypeScript
   Key files:
-    src/Api/Controllers/CustomerController.cs — existing customer endpoints
-    src/Api/Services/CustomerService.cs — business logic
-    src/Web/components/CustomerList.tsx — customer table component
-  Code flow: CustomerController → CustomerService → CustomerRepository
+    src/Api/Controllers/UserController.cs — user profile endpoints
+    src/Api/Models/UserProfile.cs — profile entity (add DarkMode bool)
+    src/Web/pages/Settings.tsx — settings page (add toggle)
+    src/Web/context/ThemeContext.tsx — theme provider (already exists)
+  Code flow: UserController.UpdateProfile() → UserService → UserRepository
 
-STORY.md written to ContosoCRM/.planning/stories/1205.md
+STORY.md written to NorthwindApp/.planning/stories/3040.md
 
 Changes?
 > ok
 
-Planning complete. Run /devsprint-execute 1205 to implement.
+Planning complete. Run /devsprint-execute 3040 to implement.
 ```
 
-### Execute — autonomous implementation
-
 ```
-> /devsprint-execute
+> /devsprint-execute 3040
 
 ╔══════════════════════════════════════════════════════╗
 ║              Pre-flight Status Check                 ║
 ╚══════════════════════════════════════════════════════╝
 
-Already completed:
-  ✓ #1201 — Add price area column to customer list
-    Executed: 2026-03-07 | PR: https://dev.azure.com/.../pullrequest/891
-
 Will execute:
-  → #1205 — CSV export of customer data
-    State: New | Tasks: 0/3 done | Repo: ContosoCRM
+  → #3040 — Add dark mode toggle to settings page
+    State: New | Tasks: 0/3 done | Repo: NorthwindApp
 
-Summary: 1 to execute, 1 already done
-
-━━━ [1/1] Story #1205 — CSV export of customer data ━━━
+━━━ [1/1] Story #3040 — Add dark mode toggle to settings page ━━━
 
   Baseline tests green — proceeding.
-  Created branch feature/1205-csv-export from develop
+  Created branch feature/3040-dark-mode-toggle from develop
 
   Task status updates:
-    #1206 (Backend: CSV endpoint): Active ✓
-    #1207 (Frontend: Download button): Active ✓
-    #1208 (Tests: CSV generation): Active ✓
+    #3041 (Backend: Store dark mode preference): Active ✓
+    #3042 (Frontend: Add toggle switch): Active ✓
+    #3043 (Tests: Dark mode persistence and UI): Active ✓
 
-  ... implementing ...
+  ... implementing (TDD: write tests → implement → verify) ...
 
   Task resolution:
-    #1206 (Backend: CSV endpoint): Resolved ✓
-    #1207 (Frontend: Download button): Resolved ✓
-    #1208 (Tests: CSV generation): Resolved ✓
+    #3041 (Backend: Store dark mode preference): Resolved ✓
+    #3042 (Frontend: Add toggle switch): Resolved ✓
+    #3043 (Tests: Dark mode persistence and UI): Resolved ✓
 
-  Story #1205 resolved ✓
+  Story #3040 resolved ✓
 
 ╔══════════════════════════════════════════╗
 ║           Execution Complete             ║
 ╚══════════════════════════════════════════╝
 
-  ✓ #1205 — CSV export of customer data
-     Branch: feature/1205-csv-export
+  ✓ #3040 — Add dark mode toggle to settings page
+     Branch: feature/3040-dark-mode-toggle
      Tasks: 3/3 resolved
-     Tests: 14 passed, 0 failed (dotnet test) — all passed
+     Tests: 22 passed, 0 failed (dotnet test) — all passed
      Story: Resolved ✓
-     PR: https://dev.azure.com/.../pullrequest/894
+     PR: https://dev.azure.com/.../pullrequest/187
 ```
 
 ## Quick start
