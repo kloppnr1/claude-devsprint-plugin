@@ -87,6 +87,9 @@
   }
   .ab-pulse.idle { background: var(--mute); box-shadow: none; animation: none; }
   .ab-label.idle { color: var(--mute); }
+  .agent-banner.done { background: rgba(34,197,94,0.06); border-color: rgba(34,197,94,0.25); }
+  .ab-pulse.done { background: #16a34a; box-shadow: 0 0 6px rgba(34,197,94,0.4); animation: none; }
+  .ab-label.done { color: #16a34a; }
   @keyframes livePulse { 0%,100%{box-shadow:0 0 8px rgba(67,56,202,0.4)} 50%{box-shadow:0 0 16px rgba(67,56,202,0.1)} }
   .ab-label {
     font-family: var(--mono); font-size: 10px; font-weight: 600;
@@ -636,6 +639,7 @@ function renderAgent(d) {
 
   const a = d.active;
   const stale = a.updatedAt && (Date.now() - new Date(a.updatedAt).getTime()) > 300000;
+  const done = a.step && /^(complete|done|finish)/i.test(a.step);
 
   if (stale) {
     banner.className = 'agent-banner idle';
@@ -646,6 +650,29 @@ function renderAgent(d) {
     story.style.color = 'var(--dim)';
     time.textContent = a.updatedAt ? AGO(a.updatedAt) : '';
     extra.style.display = 'none';
+    return;
+  }
+
+  if (done) {
+    banner.className = 'agent-banner done';
+    pulse.className = 'ab-pulse done';
+    label.className = 'ab-label done';
+    label.textContent = 'FÆRDIG';
+    story.style.color = '';
+    if (a.storyId) {
+      story.innerHTML = `<span class="id">#${a.storyId}</span>${E(a.storyTitle)}`;
+    } else {
+      story.textContent = a.detail || a.step || '...';
+    }
+    time.textContent = a.startedAt ? AGO(a.startedAt) : '';
+    extra.style.display = '';
+    step.textContent = a.detail || a.step || '';
+    step.className = 'ab-step st-done';
+    desc.textContent = '';
+    prog.innerHTML = '';
+    const storiesEl = document.getElementById('ab-stories');
+    storiesEl.style.display = 'none';
+    storiesEl.innerHTML = '';
     return;
   }
 
