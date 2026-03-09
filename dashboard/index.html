@@ -145,14 +145,19 @@
 
   /* ── Story Row ── */
   .story-row {
-    padding: 8px 16px;
-    display: grid; grid-template-columns: 48px 1fr 80px 120px auto 60px;
+    padding: 8px 16px; position: relative;
+    display: grid; grid-template-columns: 48px 1fr 80px 120px 60px;
     align-items: center; gap: 8px;
     border-bottom: 1px solid var(--border-light);
     cursor: pointer; transition: background 0.1s;
   }
   .story-row:last-child { border-bottom: none; }
   .story-row:hover { background: #faf9f7; }
+  .story-row .btn-exec {
+    position: absolute; right: 70px; top: 50%; transform: translateY(-50%);
+    opacity: 0; transition: opacity 0.15s;
+  }
+  .story-row:hover .btn-exec { opacity: 1; }
   .s-id {
     font-family: var(--mono); font-size: 10px; color: var(--mute);
   }
@@ -271,13 +276,15 @@
     text-align: center;
   }
   .btn-exec {
-    font-family: var(--mono); font-size: 9px; font-weight: 600;
-    padding: 3px 10px; border-radius: 5px; border: 1px solid var(--indigo);
-    background: var(--indigo-light); color: var(--indigo);
+    font-family: var(--sans); font-size: 11px; font-weight: 600;
+    padding: 5px 14px; border-radius: 6px; border: none;
+    background: var(--indigo); color: white;
     cursor: pointer; white-space: nowrap; transition: all 0.15s;
+    box-shadow: 0 1px 3px rgba(67,56,202,0.3);
+    letter-spacing: 0.1px;
   }
-  .btn-exec:hover { background: var(--indigo); color: white; }
-  .btn-exec:disabled { opacity: 0.5; cursor: default; background: var(--indigo-light); color: var(--indigo); }
+  .btn-exec:hover { background: #3730a3; box-shadow: 0 2px 6px rgba(67,56,202,0.4); }
+  .btn-exec:disabled { opacity: 0.5; cursor: default; }
 
   /* ── Spec Panel (overlay) ── */
   .spec-overlay {
