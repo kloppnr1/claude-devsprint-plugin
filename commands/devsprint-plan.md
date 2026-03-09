@@ -510,7 +510,7 @@ STORY.md has been written to {repoPath}/.planning/stories/{storyId}.md
 Approve, request changes, or skip? (approve/changes/skip)"
 
 - If "approve": keep the file, post spec to Azure DevOps (Step 11.1), then move to next story.
-- If "changes": respond with plain text "Hvad vil du ændre?" and STOP. Wait for the user's free-text reply (do NOT use AskUserQuestion — let them type freely). Then regenerate incorporating the feedback, and re-present for approval. Repeat until approved or skipped.
+- If "changes": respond with plain text "Hvad vil du ændre?" and STOP. Wait for the user's free-text reply (do NOT use AskUserQuestion — let them type freely). Then incorporate the feedback, and **re-present the FULL updated STORY.md content** before asking for approval again. The user must always see the complete spec before approving — never ask for approval without showing the full content first. Repeat until approved or skipped.
 - If "skip": delete the file. Note the skip in the final summary.
 
 **Step 11.1 — Post spec as Azure DevOps comment:**
