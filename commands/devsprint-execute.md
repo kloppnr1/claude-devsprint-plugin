@@ -113,8 +113,13 @@ Check if the user passed a story ID as argument (e.g., `/devsprint-execute 42920
 - If a numeric ID is provided: `mode = "single"`, `targetStoryId = <the ID>`.
 - If no argument: `mode = "all"`.
 
+Check for the `--headless` flag in the arguments:
+- If present: set `headless = true`. This makes single-story mode fully autonomous (same as all-stories mode) — no `AskUserQuestion`, blockers are logged and skipped. Used by the dashboard to spawn execution in the background.
+- If not present: set `headless = false` (default).
+
 **Behavioral rules by mode:**
-- `single` mode: mostly autonomous. The agent makes best judgment calls on blockers and continues. Only uses `AskUserQuestion` if the story spec explicitly marks something as "BLOKERER implementation". Stop on critical errors.
+- `single` mode (default): mostly autonomous. The agent makes best judgment calls on blockers and continues. Only uses `AskUserQuestion` if the story spec explicitly marks something as "BLOKERER implementation". Stop on critical errors.
+- `single` mode with `--headless`: fully autonomous, identical to `all` mode. NEVER uses `AskUserQuestion`. Blockers are logged as "skipped" and the agent continues with remaining tasks. Critical errors are logged, not stopped on.
 - `all` mode: fully autonomous. The agent does NOT use `AskUserQuestion` at any point. If you encounter a blocker on one story, log the error and move on to the next story. The user expects to walk away and come back to completed work.
 
 **Context isolation:** In both modes, each story runs inside its own Agent to keep the main conversation lightweight and prevent context exhaustion. The orchestrator only handles pre-flight checks, agent launching, log writing, and the final summary.
@@ -269,14 +274,14 @@ Launch an Agent with the full execution instructions for this single story (Step
   - Step 4h: `--step "Complete" --detail "Story #{storyId} finished"`
 
 **Mode-specific agent instructions:**
-- `all` mode: Include instruction to NEVER use `AskUserQuestion` — fully autonomous. On blockers, make best judgment and continue.
-- `single` mode: Include instruction to make best judgment and continue on blockers, like `all` mode. Only use `AskUserQuestion` if the story spec explicitly marks something as "BLOKERER implementation". Stop on critical errors (missing spec, test baseline failures).
+- `all` mode or `headless`: Include instruction to NEVER use `AskUserQuestion` — fully autonomous. On blockers, make best judgment and continue. Critical errors are logged, not stopped on.
+- `single` mode (not headless): Include instruction to make best judgment and continue on blockers, like `all` mode. Only use `AskUserQuestion` if the story spec explicitly marks something as "BLOKERER implementation". Stop on critical errors (missing spec, test baseline failures).
 
 Do NOT run agents in background — run them sequentially so each story completes before the next starts. Parse the agent's returned summary, add to `executionResults`, and **immediately write to the execution log** (Step 4i) before launching the next agent. This ensures progress is persisted even if a later story crashes or the session is interrupted.
 
 Steps 4a–4h below describe the work the agent performs:
 
-Execute Steps 4a–4h below. In `all` mode: if any step encounters a non-fatal error, log it and continue to the next step. In `single` mode: stop on errors and consult the user via `AskUserQuestion`.
+Execute Steps 4a–4h below. In `all` mode or `--headless`: if any step encounters a non-fatal error, log it and continue to the next step. In `single` mode (not headless): stop on errors and consult the user via `AskUserQuestion`.
 
   **Step 4a — Check story state:**
 
@@ -396,8 +401,8 @@ Execute Steps 4a–4h below. In `all` mode: if any step encounters a non-fatal e
 
   6. **Handle blockers**:
      - Both `single` and `all` mode: make your best judgment call and proceed. Log any assumptions.
-     - Only use `AskUserQuestion` (in `single` mode only) if the story spec explicitly marks something as "BLOKERER implementation" — this indicates the spec author determined it cannot be resolved without user input.
-     - `all` mode: NEVER use `AskUserQuestion`. Make best judgment and continue.
+     - Only use `AskUserQuestion` (in `single` mode without `--headless`) if the story spec explicitly marks something as "BLOKERER implementation" — this indicates the spec author determined it cannot be resolved without user input.
+     - `all` mode or `--headless`: NEVER use `AskUserQuestion`. Make best judgment and continue. Log blockers as skipped.
      - If the story spec has "Open Questions & Blockers": skip items marked as blocking, implement what you can.
 
   7. **Commit changes**: Tests and implementation should already be committed from the TDD cycles above. If any uncommitted changes remain, commit them with descriptive messages referencing the story ID.

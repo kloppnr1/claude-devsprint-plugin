@@ -51,3 +51,6 @@ fi
 
 echo
 echo "Done. Restart Claude Code to pick up changes."
+echo
+echo "Dashboard: node $SCRIPT_DIR/dashboard/server.cjs --cwd <your-project-path>"
+echo "  Opens at http://localhost:3000"

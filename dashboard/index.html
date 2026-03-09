@@ -145,7 +145,9 @@
 
   /* ── Story Row ── */
   .story-row {
-    padding: 8px 16px; display: flex; align-items: center; gap: 8px;
+    padding: 8px 16px;
+    display: grid; grid-template-columns: 48px 1fr 80px 120px auto 60px;
+    align-items: center; gap: 8px;
     border-bottom: 1px solid var(--border-light);
     cursor: pointer; transition: background 0.1s;
   }
@@ -153,14 +155,13 @@
   .story-row:hover { background: #faf9f7; }
   .s-id {
     font-family: var(--mono); font-size: 10px; color: var(--mute);
-    min-width: 40px; flex-shrink: 0;
   }
   .s-title {
-    font-size: 12.5px; font-weight: 500; color: var(--text2); flex: 1;
+    font-size: 12.5px; font-weight: 500; color: var(--text2);
     overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
   }
   /* Inline indicators — visible without expanding */
-  .s-indicators { display: flex; align-items: center; gap: 4px; flex-shrink: 0; }
+  .s-indicators { display: flex; align-items: center; gap: 4px; justify-content: flex-end; }
   .ind {
     font-family: var(--mono); font-size: 8px; font-weight: 600;
     padding: 1px 6px; border-radius: 3px; letter-spacing: 0.2px;
@@ -229,6 +230,22 @@
   .v-wait { background: var(--amber-light); color: var(--amber); }
   .v-none { background: #f0ede8; color: var(--mute); }
 
+  /* ── History entries ── */
+  .hist-row {
+    display: grid; grid-template-columns: 140px 1fr auto; gap: 6px; align-items: center;
+  }
+  .hist-step {
+    font-family: var(--mono); font-size: 9px; font-weight: 600;
+    padding: 1px 6px; border-radius: 3px; background: #f0ede8;
+    color: var(--dim); text-transform: uppercase; letter-spacing: 0.2px;
+    white-space: nowrap; text-align: center;
+  }
+  .hist-more {
+    font-family: var(--mono); font-size: 10px; color: var(--blue);
+    cursor: pointer; padding: 4px 0; user-select: none;
+  }
+  .hist-more:hover { text-decoration: underline; }
+
   /* ── Repo Commits Toggle ── */
   .commits-toggle {
     display: flex; align-items: center; gap: 6px; padding: 6px 16px;
@@ -245,6 +262,49 @@
     border-top: 1px solid var(--border-light);
   }
   .commit-group-label:first-child { border-top: none; margin-top: 0; }
+
+  /* ── Repo badge on story row ── */
+  .s-repo {
+    font-family: var(--mono); font-size: 8px; font-weight: 600;
+    padding: 1px 6px; border-radius: 3px; letter-spacing: 0.2px;
+    background: #f0ede8; color: var(--dim); white-space: nowrap;
+    text-align: center;
+  }
+  .btn-exec {
+    font-family: var(--mono); font-size: 9px; font-weight: 600;
+    padding: 3px 10px; border-radius: 5px; border: 1px solid var(--indigo);
+    background: var(--indigo-light); color: var(--indigo);
+    cursor: pointer; white-space: nowrap; transition: all 0.15s;
+  }
+  .btn-exec:hover { background: var(--indigo); color: white; }
+  .btn-exec:disabled { opacity: 0.5; cursor: default; background: var(--indigo-light); color: var(--indigo); }
+
+  /* ── Status group header ── */
+  .status-header {
+    padding: 10px 16px; display: flex; align-items: center; gap: 8px;
+    background: var(--bg); border-bottom: 1px solid var(--border-light);
+  }
+  .status-icon { font-size: 12px; opacity: 0.7; }
+  .status-label {
+    font-family: var(--mono); font-size: 12px; font-weight: 600;
+    color: var(--text); flex: 1;
+  }
+  .status-count {
+    font-family: var(--mono); font-size: 9px; font-weight: 600;
+    padding: 2px 7px; border-radius: 4px; letter-spacing: 0.2px;
+  }
+  .sg-active .status-label { color: var(--blue); }
+  .sg-active .status-count { background: var(--blue-light); color: var(--blue); }
+  .sg-planned .status-label { color: var(--cyan); }
+  .sg-planned .status-count { background: var(--cyan-light); color: var(--cyan); }
+  .sg-blocked .status-label { color: var(--red); }
+  .sg-blocked .status-count { background: var(--red-light); color: var(--red); }
+  .sg-partial .status-label { color: var(--amber); }
+  .sg-partial .status-count { background: var(--amber-light); color: var(--amber); }
+  .sg-unplanned .status-label { color: var(--dim); }
+  .sg-unplanned .status-count { background: #f0ede8; color: var(--dim); }
+  .sg-done .status-label { color: var(--green); }
+  .sg-done .status-count { background: var(--green-light); color: var(--green); }
 
   /* ── Unlinked stories ── */
   .unlinked-header {
@@ -513,10 +573,12 @@ function fillIndicators(el, s, ctx) {
 
 /* ── Build a story row + detail panel (DOM, no innerHTML) ── */
 function buildStoryRow(s, ctx) {
-  const { exM, prM, ag } = ctx;
+  const { exM, prM, ag, sRM } = ctx;
   const ex = exM[s.id], pr = prM[s.id];
   const live = ag && ag.active && ag.active.storyId === s.id;
-  const hasDetail = !!(ex || pr || live);
+  // History entries for this story from agent-status history
+  const hist = ag && ag.history ? ag.history.filter(h => h.storyId === s.id) : [];
+  const hasDetail = !!(ex || pr || live || hist.length);
 
   const row = cel('div', 'story-row');
   row.dataset.storyId = s.id;
@@ -529,6 +591,24 @@ function buildStoryRow(s, ctx) {
   inds.dataset.storyIndicators = s.id;
   fillIndicators(inds, s, ctx);
   row.appendChild(inds);
+
+  // Repo badge (strip common prefix)
+  const repoName = sRM ? sRM[s.id] : null;
+  if (repoName) row.appendChild(cel('span', 's-repo', repoName.replace(/^NewSettlement\./, '')));
+
+  // Execute button for planned/partial stories
+  const cls = classifyStory(s, ctx);
+  if (cls === 'planned' || cls === 'partial') {
+    const btn = cel('button', 'btn-exec', '\u25B6 Execute');
+    btn.onclick = function(e) {
+      e.stopPropagation();
+      btn.disabled = true; btn.textContent = 'Starting\u2026';
+      fetch('/api/execute', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({storyId: s.id}) })
+        .then(r => r.json()).then(() => { btn.textContent = 'Launched'; })
+        .catch(() => { btn.disabled = false; btn.textContent = '\u25B6 Execute'; });
+    };
+    row.appendChild(btn);
+  }
 
   const sc = SC(s.state);
   const stCls = s.state.toLowerCase() === 'closed' ? 'st-closed' : 'st-' + sc;
@@ -597,6 +677,43 @@ function buildStoryRow(s, ctx) {
       pl.appendChild(vs);
     }
     sec.appendChild(pl);
+    detail.appendChild(sec);
+  }
+
+  // History section — show devsprint activity for this story
+  if (hist.length) {
+    const sec = cel('div', 'detail-sec');
+    sec.appendChild(cel('div', 'detail-label', 'Historik'));
+    const LIMIT = 5;
+    const visible = hist.slice(0, LIMIT);
+    const overflow = hist.length > LIMIT;
+    for (const h of visible) {
+      const r = cel('div', 'detail-row hist-row');
+      r.appendChild(cel('span', 'hist-step', h.step || ''));
+      r.appendChild(cel('span', 'txt', h.detail || ''));
+      r.appendChild(cel('span', 'ts', D(h.startedAt)));
+      sec.appendChild(r);
+    }
+    if (overflow) {
+      const moreBtn = cel('div', 'hist-more', '\u25B6 Vis alle (' + hist.length + ')');
+      const moreSection = cel('div', 'hist-overflow');
+      moreSection.style.display = 'none';
+      for (const h of hist.slice(LIMIT)) {
+        const r = cel('div', 'detail-row hist-row');
+        r.appendChild(cel('span', 'hist-step', h.step || ''));
+        r.appendChild(cel('span', 'txt', h.detail || ''));
+        r.appendChild(cel('span', 'ts', D(h.startedAt)));
+        moreSection.appendChild(r);
+      }
+      moreBtn.onclick = function(e) {
+        e.stopPropagation();
+        const show = moreSection.style.display === 'none';
+        moreSection.style.display = show ? '' : 'none';
+        moreBtn.textContent = show ? '\u25BC Skjul' : '\u25B6 Vis alle (' + hist.length + ')';
+      };
+      sec.appendChild(moreBtn);
+      sec.appendChild(moreSection);
+    }
     detail.appendChild(sec);
   }
 
@@ -675,46 +792,67 @@ function buildCommits(git, repoStories, repoId, cutoff) {
   return frag;
 }
 
+/* ── Classify a story into a status group based on devsprint workflow ── */
+function classifyStory(s, ctx) {
+  const { exM, ag, plannedIds, isDone } = ctx;
+  // DevOps state overrides: if Resolved/Closed/Done in DevOps, it's done
+  if (isDone(s)) return 'done';
+  // Blocked — title contains BLOKERET, or execution was skipped due to blocker
+  if (s.title && s.title.toUpperCase().includes('BLOKERET')) return 'blocked';
+  const ex = exM[s.id];
+  if (ex && ex.status === 'skipped') return 'blocked';
+  // Live — agent is currently working on it
+  if (ag && ag.active) {
+    const stories = ag.active.stories || {};
+    if (ag.active.storyId === s.id || stories[String(s.id)]) return 'live';
+  }
+  // Completed — execution log says completed
+  if (ex && ex.status === 'completed') return 'done';
+  // Partial — execution log says partial
+  if (ex && ex.status === 'partial') return 'partial';
+  // Planned — in task map with tasks but not executed
+  if (plannedIds.has(s.id)) return 'planned';
+  // Not planned — in sprint but not in task map
+  return 'unplanned';
+}
+
 /* ── Build entire main board DOM ── */
-function buildMainDOM(mainEl, rA, rC, ulA, ulC, ctx) {
-  const { gitM } = ctx;
+function buildMainDOM(mainEl, statusGroups, ctx) {
+  const { gitM, sRM } = ctx;
   while (mainEl.firstChild) mainEl.removeChild(mainEl.firstChild);
   _dom.storyDoms.clear();
 
-  // Merge all repos — active and completed in the same card
-  const allRepos = new Set([...Object.keys(rA), ...Object.keys(rC)]);
+  const groupMeta = {
+    live:      { label: 'I gang',        icon: '\u25B6', css: 'sg-active'  },
+    partial:   { label: 'Delvis',        icon: '\u25D4', css: 'sg-partial' },
+    planned:   { label: 'Planlagt',      icon: '\u25CB', css: 'sg-planned' },
+    unplanned: { label: 'Ikke planlagt', icon: '\u2013', css: 'sg-unplanned' },
+    blocked:   { label: 'Blokeret',      icon: '\u2298', css: 'sg-blocked' },
+    done:      { label: 'Afsluttet',     icon: '\u2713', css: 'sg-done'    },
+  };
+  const groupOrder = ['live', 'partial', 'planned', 'unplanned', 'blocked', 'done'];
 
-  for (const rn of allRepos) {
-    const active = rA[rn] || [];
-    const completed = rC[rn] || [];
-    const git = gitM[rn] || {};
+  for (const key of groupOrder) {
+    const stories = statusGroups[key] || [];
+    if (!stories.length) continue;
+    const meta = groupMeta[key];
+
     const card = cel('div', 'repo-card');
 
-    const header = cel('div', 'repo-header');
-    header.appendChild(cel('span', 'repo-icon', '\uD83D\uDCC1'));
-    header.appendChild(cel('span', 'repo-name', rn));
-    const badges = cel('div', 'repo-badges');
-    const total = active.length + completed.length;
-    badges.appendChild(cel('span', 'badge badge-count', total + (total === 1 ? ' story' : ' stories')));
-    if (git.hasChanges) badges.appendChild(cel('span', 'badge badge-dirty', 'uncommitted'));
-    header.appendChild(badges);
+    const header = cel('div', 'status-header ' + meta.css);
+    header.appendChild(cel('span', 'status-icon', meta.icon));
+    header.appendChild(cel('span', 'status-label', meta.label));
+    header.appendChild(cel('span', 'status-count', String(stories.length)));
     card.appendChild(header);
 
     const body = cel('div', 'repo-body');
 
-    // Active stories
-    for (const s of active) {
-      const sd = buildStoryRow(s, ctx);
-      body.appendChild(sd.row); body.appendChild(sd.detail);
-      _dom.storyDoms.set(s.id, sd);
-    }
-
-    // Completed stories — collapsed toggle inside the same card
-    if (completed.length) {
-      const compId = 'done-' + rn.replace(/[^a-zA-Z0-9]/g, '');
+    if (key === 'done') {
+      // Completed stories — collapsed by default
+      const compId = 'done-all';
       const toggle = cel('div', 'commits-toggle');
       const arrow = cel('span', 'ct-arrow', '\u25B6');
-      const label = cel('span', 'ct-label', 'Afsluttede (' + completed.length + ')');
+      const label = cel('span', 'ct-label', stories.length + ' afsluttede stories');
       label.style.color = 'var(--green)';
       toggle.appendChild(arrow); toggle.appendChild(label);
       const section = cel('div', 'commits-section');
@@ -724,57 +862,21 @@ function buildMainDOM(mainEl, rA, rC, ulA, ulC, ctx) {
         section.style.display = show ? '' : 'none';
         arrow.textContent = show ? '\u25BC' : '\u25B6';
       };
-      for (const s of completed) {
+      for (const s of stories) {
         const sd = buildStoryRow(s, ctx);
         sd.row.style.opacity = '0.55';
         section.appendChild(sd.row); section.appendChild(sd.detail);
         _dom.storyDoms.set(s.id, sd);
       }
       body.appendChild(toggle); body.appendChild(section);
-    }
-
-    // Commits
-    const allRepoStories = [...active, ...completed];
-    body.appendChild(buildCommits(git, allRepoStories, rn.replace(/[^a-zA-Z0-9]/g, ''), ctx.commitCutoff));
-    card.appendChild(body);
-    mainEl.appendChild(card);
-  }
-
-  // Unlinked stories (active + completed collapsed)
-  if (ulA.length || ulC.length) {
-    const card = cel('div', 'repo-card');
-    const total = ulA.length + ulC.length;
-    card.appendChild(cel('div', 'unlinked-header', 'Uden repo-tilknytning (' + total + ')'));
-    const body = document.createElement('div');
-    for (const s of ulA) {
-      const row = cel('div', 'story-row');
-      row.appendChild(cel('span', 's-id', '#' + s.id));
-      row.appendChild(cel('span', 's-title', s.title));
-      row.appendChild(cel('span', 's-state st-' + SC(s.state), s.state));
-      body.appendChild(row);
-    }
-    if (ulC.length) {
-      const toggle = cel('div', 'commits-toggle');
-      const arrow = cel('span', 'ct-arrow', '\u25B6');
-      const label = cel('span', 'ct-label', 'Afsluttede (' + ulC.length + ')');
-      label.style.color = 'var(--green)';
-      toggle.appendChild(arrow); toggle.appendChild(label);
-      const section = cel('div', 'commits-section');
-      section.id = 'done-unlinked'; section.style.display = 'none';
-      toggle.onclick = function() {
-        const show = section.style.display === 'none';
-        section.style.display = show ? '' : 'none';
-        arrow.textContent = show ? '\u25BC' : '\u25B6';
-      };
-      for (const s of ulC) {
-        const row = cel('div', 'story-row'); row.style.opacity = '0.55';
-        row.appendChild(cel('span', 's-id', '#' + s.id));
-        row.appendChild(cel('span', 's-title', s.title));
-        row.appendChild(cel('span', 's-state st-resolved', s.state));
-        section.appendChild(row);
+    } else {
+      for (const s of stories) {
+        const sd = buildStoryRow(s, ctx);
+        body.appendChild(sd.row); body.appendChild(sd.detail);
+        _dom.storyDoms.set(s.id, sd);
       }
-      body.appendChild(toggle); body.appendChild(section);
     }
+
     card.appendChild(body);
     mainEl.appendChild(card);
   }
@@ -805,9 +907,7 @@ function renderMain() {
   const sRM = {}; if (S.map && S.map.mappings) for (const m of S.map.mappings) if (m.repoPath) sRM[m.storyId] = m.repoPath.replace(/\\/g, '/').split('/').pop();
 
   const isDone = s => ['resolved', 'closed', 'done'].includes((s.state || '').toLowerCase());
-  const rA = {}, rC = {}, unl = [];
-  for (const s of stories) { const r = sRM[s.id]; if (r) { const b = isDone(s) ? rC : rA; (b[r] = b[r] || []).push(s); } else unl.push(s); }
-  const allR = new Set([...Object.keys(rA), ...Object.keys(rC)]);
+  const allR = new Set(); if (S.map && S.map.mappings) for (const m of S.map.mappings) if (m.repoPath) allR.add(m.repoPath.replace(/\\/g, '/').split('/').pop());
 
   document.getElementById('s-stories').textContent = stories.length;
   document.getElementById('s-done').textContent = stories.filter(isDone).length;
@@ -819,22 +919,22 @@ function renderMain() {
   const plannedIds = new Set();
   if (S.map && S.map.mappings) for (const m of S.map.mappings) if (m.taskIds && m.taskIds.length > 0) plannedIds.add(m.storyId);
 
-  const ctx = { exM, prM, gitM, ag, plannedIds, commitCutoff: weekdayCutoff(3), isDone };
-  const ulA = unl.filter(s => !isDone(s));
-  const ulC = unl.filter(isDone);
+  const ctx = { exM, prM, gitM, ag, plannedIds, commitCutoff: weekdayCutoff(3), isDone, sRM };
 
-  // Structure key: which repos have which stories
-  const structKey = JSON.stringify([
-    Object.entries(rA).map(([r,sl]) => [r, sl.map(s=>s.id)]),
-    ulA.map(s=>s.id),
-    Object.entries(rC).map(([r,sl]) => [r, sl.map(s=>s.id)]),
-    ulC.map(s=>s.id)
-  ]);
+  // Classify stories into status groups based on devsprint workflow
+  const statusGroups = { live: [], partial: [], planned: [], unplanned: [], blocked: [], done: [] };
+  for (const s of stories) {
+    statusGroups[classifyStory(s, ctx)].push(s);
+  }
+
+  // Structure key: which status groups have which stories
+  const structKey = JSON.stringify(
+    ['live', 'partial', 'planned', 'unplanned', 'blocked', 'done'].map(k => [k, (statusGroups[k] || []).map(s => s.id)])
+  );
 
   if (!_dom.built || structKey !== _dom.structKey) {
-    // Structural change: rebuild DOM (save/restore toggle states)
     const toggles = _dom.built ? saveToggles(mainEl) : {};
-    buildMainDOM(mainEl, rA, rC, ulA, ulC, ctx);
+    buildMainDOM(mainEl, statusGroups, ctx);
     if (Object.keys(toggles).length) restoreToggles(mainEl, toggles);
     _dom.built = true;
     _dom.structKey = structKey;

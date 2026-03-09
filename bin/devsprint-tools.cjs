@@ -1261,7 +1261,31 @@ function renderSprintBoard(sprint, items, options = {}) {
     }
   });
 
+  // Classify stories into status groups
+  const doneStatesSet = new Set(['Resolved', 'Closed', 'Done']);
+  const groups = {
+    blocked:   { label: 'Blokeret',  icon: '⊘', color: RED,    stories: [] },
+    active:    { label: 'I gang',    icon: '▶', color: BLUE,   stories: [] },
+    planned:   { label: 'Ny',        icon: '○', color: CYAN,   stories: [] },
+    completed: { label: 'Afsluttet', icon: '✓', color: GREEN,  stories: [] },
+  };
+
   for (const story of topLevel) {
+    if (story.title && story.title.toUpperCase().includes('BLOKERET')) {
+      groups.blocked.stories.push(story);
+    } else if (doneStatesSet.has(story.state)) {
+      groups.completed.stories.push(story);
+    } else if (story.state === 'Active') {
+      groups.active.stories.push(story);
+    } else {
+      groups.planned.stories.push(story);
+    }
+  }
+
+  // Render each group that has stories
+  const groupOrder = ['active', 'planned', 'blocked', 'completed'];
+
+  function renderStory(story) {
     const sc = stateColor(story.state);
     const abbrev = typeAbbrev(story.type);
     const assigned = story.assignedTo || 'Unassigned';
@@ -1299,7 +1323,6 @@ function renderSprintBoard(sprint, items, options = {}) {
 
     // Child tasks
     const allChildren = childrenOf.get(story.id) || [];
-    const doneStatesSet = new Set(['Resolved', 'Closed', 'Done']);
     const children = detailed ? allChildren : allChildren.filter(c => !doneStatesSet.has(c.state));
     const hiddenCount = allChildren.length - children.length;
     if (children.length > 0) {
@@ -1316,6 +1339,18 @@ function renderSprintBoard(sprint, items, options = {}) {
 
     push('└──────');
     push('');
+  }
+
+  for (const key of groupOrder) {
+    const group = groups[key];
+    if (group.stories.length === 0) continue;
+
+    push(`${BOLD}${group.color}── ${group.icon} ${group.label} (${group.stories.length}) ──${RESET}`);
+    push('');
+
+    for (const story of group.stories) {
+      renderStory(story);
+    }
   }
 
   return lines;

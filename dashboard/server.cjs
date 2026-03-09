@@ -341,6 +341,20 @@ async function handleRequest(req, res) {
         case '/api/pr-status':
           data = await fetchPRStatus();
           break;
+        case '/api/execute':
+          if (req.method === 'POST') {
+            let body = '';
+            req.on('data', c => body += c);
+            await new Promise(r => req.on('end', r));
+            const { storyId } = JSON.parse(body);
+            if (!storyId) { res.writeHead(400); res.end(JSON.stringify({ error: 'storyId required' })); return; }
+            const { exec: execFn } = require('child_process');
+            execFn(`start cmd /k "cd /d ${CWD} && claude /devsprint-execute ${storyId} --headless"`, { shell: true });
+            data = { status: 'launched', storyId };
+          } else {
+            res.writeHead(405); res.end(JSON.stringify({ error: 'POST only' })); return;
+          }
+          break;
         case '/api/summary':
           const [sprint, gitActivity, prStatus] = await Promise.all([
             fetchSprintData().catch(() => null),
