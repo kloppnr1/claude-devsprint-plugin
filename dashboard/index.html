@@ -672,14 +672,7 @@ function renderAgent(d) {
   }
 
   if (storyKeys.length > 1) {
-    // Per-story progress: show a mini bar per story
-    const total = getSteps('').length || 8;
-    prog.innerHTML = storyKeys.map(k => {
-      const ss = storyMap[k];
-      const si = stepI(ss.step);
-      const pct = Math.max(5, Math.round(((si + 1) / total) * 100));
-      return `<div class="ab-bar-multi" style="flex:1"><div style="width:${pct}%;height:100%;border-radius:2px;background:var(--indigo);opacity:${si > 0 ? 0.7 : 0.3}"></div></div>`;
-    }).join('');
+    prog.innerHTML = '';
   } else {
     const steps = getSteps(a.step);
     const ci = stepI(a.step);
