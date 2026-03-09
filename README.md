@@ -240,13 +240,13 @@ Defaults to showing only your assigned items (`--me`). Use `--all` to see the en
 Create stories and tasks from a natural language description. Parses your intent, creates work items via the Azure DevOps API — all assigned to the current sprint.
 
 Examples:
-- `/devsprint-create Tilføj prisområde-kolonne til kundelisten` — creates a single User Story
-- `/devsprint-create Implementer CSV-eksport: 1) Backend endpoint 2) Frontend knap 3) Tests` — creates a story with 3 tasks
-- `/devsprint-create Tilføj tasks til #42920: test, deploy` — creates tasks under an existing story
+- `/devsprint-create Add notification preferences page` — creates a single User Story
+- `/devsprint-create Add CSV export: 1) Backend endpoint 2) Frontend button 3) Tests` — creates a story with 3 tasks
+- `/devsprint-create Add tasks to #1205: write tests, update docs` — creates tasks under an existing story
 
 ### `/devsprint-plan [story-id]`
 
-The main analysis pipeline. Run without arguments to plan all assigned stories, or pass a story ID to plan a single story (e.g., `/devsprint-plan 42920`). Already resolved stories are automatically skipped. Previously analyzed stories are skipped unless `--reanalyze` is passed.
+The main analysis pipeline. Run without arguments to plan all assigned stories, or pass a story ID to plan a single story (e.g., `/devsprint-plan 1205`). Already resolved stories are automatically skipped. Previously analyzed stories are skipped unless `--reanalyze` is passed.
 
 **What it does, step by step:**
 
@@ -257,7 +257,7 @@ The main analysis pipeline. Run without arguments to plan all assigned stories, 
 5. **Update Azure DevOps** — replaces the story description and acceptance criteria with the verified analysis (see warning below)
 6. **Generate story spec** — writes `STORY.md` to `{repoPath}/.planning/stories/{storyId}.md` with: goal, background, testable acceptance criteria, key files with paths, architecture/code flow, implementation notes, contacts, open questions, and out-of-scope items
 7. **Self-review** — checks the generated spec against a quality checklist (specific goal, real file paths, traced code flow, no vague placeholders, blockers captured) and fixes issues before presenting
-8. **Spec review** — shows the full spec and asks "Ændringer?" — type corrections or "ok" to continue
+8. **Spec review** — shows the full spec and asks "Changes?" — type corrections or "ok" to continue
 9. **Post to Azure DevOps** — adds a summary of the approved spec as a comment on the story
 10. **Task map** — writes/merges `.planning/devsprint-task-map.json` mapping story IDs → repos → task IDs for status tracking during execution
 
@@ -269,7 +269,7 @@ The main analysis pipeline. Run without arguments to plan all assigned stories, 
 
 Execute story plans. Two modes depending on arguments:
 
-- **`/devsprint-execute 42920`** — single story. Creates a feature branch, implements the story spec, resolves tasks, creates a PR. Mostly autonomous — only asks for input on items explicitly marked as blocking in the spec.
+- **`/devsprint-execute 1205`** — single story. Creates a feature branch, implements the story spec, resolves tasks, creates a PR. Mostly autonomous — only asks for input on items explicitly marked as blocking in the spec.
 - **`/devsprint-execute`** — all stories, fully autonomous. Loops through every story in the task map without user interaction. Errors on one story don't block the next. Outputs a full summary with all PR links at the end.
 
 PRs are created via the Azure DevOps REST API and automatically linked to the story via `workItemRefs`.
@@ -279,7 +279,7 @@ PRs are created via the Azure DevOps REST API and automatically linked to the st
 Fix PR review comments. Takes a story ID, finds the matching PR automatically (by title prefix `#{storyId}`), fetches unresolved review comments, checks out the PR branch, fixes all issues, runs tests, and pushes.
 
 ```
-/devsprint-pr-fix 42917
+/devsprint-pr-fix 1205
 ```
 
 ## Helper script CLI
