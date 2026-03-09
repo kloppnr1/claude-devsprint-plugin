@@ -116,6 +116,102 @@ Will execute:
      PR: https://dev.azure.com/.../pullrequest/187
 ```
 
+### Batch mode — plan and execute an entire sprint
+
+Skip the story ID and it processes everything autonomously. Walk away and come back to PRs.
+
+```
+> /devsprint-plan
+
+=== Analysis: Sprint 7 ===
+
+You have 3 stories:
+
+  [US] #3040 -- Add dark mode toggle (New) → NorthwindApp
+  [US] #3044 -- Email notification preferences (New) → NorthwindApp
+  [US] #3048 -- Fix timezone bug in scheduler (New) → NorthwindApp
+
+Analyzing...
+
+#3040 — already analyzed, keeping existing spec.
+#3044 → NorthwindApp (same as other stories)
+  ... analyzing repo, generating spec ...
+  STORY.md written to NorthwindApp/.planning/stories/3044.md
+  Changes?
+> ok
+
+#3048 → NorthwindApp (same as other stories)
+  ... analyzing repo, generating spec ...
+  STORY.md written to NorthwindApp/.planning/stories/3048.md
+  Changes?
+> ok
+
+=== Analysis Complete ===
+
+Stories planned:
+  #3044 Email notification preferences → NorthwindApp/.planning/stories/3044.md
+  #3048 Fix timezone bug in scheduler → NorthwindApp/.planning/stories/3048.md
+
+Kept existing:
+  #3040 Add dark mode toggle (already analyzed — kept existing spec)
+
+Planning complete. Run /devsprint-execute to implement all stories.
+```
+
+```
+> /devsprint-execute
+
+╔══════════════════════════════════════════════════════╗
+║              Pre-flight Status Check                 ║
+╚══════════════════════════════════════════════════════╝
+
+Already completed:
+  ✓ #3040 — Add dark mode toggle
+    Executed: 2026-03-08 | PR: https://dev.azure.com/.../pullrequest/187
+
+Will execute:
+  → #3044 — Email notification preferences
+    State: New | Tasks: 0/4 done | Repo: NorthwindApp
+  → #3048 — Fix timezone bug in scheduler
+    State: New | Tasks: 0/2 done | Repo: NorthwindApp
+
+Summary: 2 to execute, 1 already done
+
+━━━ [1/2] Story #3044 — Email notification preferences ━━━
+  Created branch feature/3044-email-notifications from develop
+  ... implementing ...
+  Story #3044 resolved ✓
+
+━━━ [2/2] Story #3048 — Fix timezone bug in scheduler ━━━
+  Created branch feature/3048-timezone-fix from develop
+  ... implementing ...
+  Story #3048 resolved ✓
+
+╔══════════════════════════════════════════╗
+║           Execution Complete             ║
+╚══════════════════════════════════════════╝
+
+Sprint: Sprint 7
+Stories processed: 2 | Previously completed: 1
+
+  ✓ #3044 — Email notification preferences
+     Tasks: 4/4 resolved | Tests: 31 passed, 0 failed
+     PR: https://dev.azure.com/.../pullrequest/188
+
+  ✓ #3048 — Fix timezone bug in scheduler
+     Tasks: 2/2 resolved | Tests: 18 passed, 0 failed
+     PR: https://dev.azure.com/.../pullrequest/189
+
+Previously completed:
+  ✓ #3040 — Add dark mode toggle
+     Completed: 2026-03-08 | PR: https://dev.azure.com/.../pullrequest/187
+
+All pull requests:
+  https://dev.azure.com/.../pullrequest/187
+  https://dev.azure.com/.../pullrequest/188
+  https://dev.azure.com/.../pullrequest/189
+```
+
 ## Quick start
 
 ```
