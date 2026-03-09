@@ -1123,7 +1123,7 @@ function renderSprintBoard(sprint, items) {
 
   function stateColor(state) {
     switch (state) {
-      case 'New': return WHITE;
+      case 'New': return CYAN;
       case 'Active': return BLUE;
       case 'Resolved': return GREEN;
       case 'Closed': case 'Done': return GREEN + BOLD;
@@ -1187,7 +1187,7 @@ function renderSprintBoard(sprint, items) {
     const abbrev = typeAbbrev(story.type);
     const assigned = story.assignedTo || 'Unassigned';
 
-    push(`${BOLD}┌─ [${abbrev}] #${story.id} — ${story.title}${RESET}`);
+    push(`${BOLD}${sc}┌─ [${abbrev}] #${story.id} — ${story.title}${RESET}`);
     push(`│  State: ${sc}${stateLabel(story.state)}${RESET}  │  Assigned: ${assigned}`);
 
     // Description (first 3 lines) — items already have HTML stripped by get-sprint-items
