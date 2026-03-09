@@ -112,8 +112,8 @@
   .ab-srow .name { color: var(--text2); flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 200px; }
   .ab-srow .ab-sstep { font-family: var(--mono); font-size: 8px; font-weight: 600; padding: 1px 6px; border-radius: 3px; background: rgba(67,56,202,0.1); color: var(--indigo); text-transform: uppercase; letter-spacing: 0.3px; }
   .ab-srow .ab-sdesc { color: var(--dim); font-size: 10px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; }
-  @keyframes storyPulse { 0%,100%{box-shadow:inset 0 0 0 0 transparent} 50%{box-shadow:inset 0 0 12px rgba(67,56,202,0.06)} }
-  .story-row.story-live > * { background: var(--indigo-light); animation: storyPulse 2s ease-in-out infinite; }
+  .story-row.story-live > * { background: var(--indigo-light); }
+  .story-row.story-live > :first-child { box-shadow: inset 3px 0 0 var(--indigo); }
 
   /* ── Stats ── */
   .stats { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; margin-bottom: 24px; }
@@ -165,8 +165,10 @@
     cursor: pointer;
   }
   .story-row > * {
-    padding: 10px 5px; border-bottom: 1px solid var(--border-light);
+    padding: 10px 5px;
+    border-bottom: 1px solid var(--border-light);
     transition: background 0.1s;
+    display: flex; align-items: center; align-self: stretch;
   }
   .story-row > :first-child { padding-left: 16px; }
   .story-row > :last-child { padding-right: 16px; }
@@ -574,6 +576,11 @@ function cel(tag, cls, txt) {
   if (txt != null) e.textContent = String(txt);
   return e;
 }
+function escH(s) {
+  const d = document.createElement('div');
+  d.textContent = s;
+  return d.innerHTML;
+}
 
 /* ── Agent ── */
 const EXEC_STEPS=['Pre-flight','Analyze','Baseline','Branch','Activate','Write Tests','Implement','Test','Commit','PR','Resolve','Done'];
@@ -752,14 +759,17 @@ function openSpecPanel(storyId, title) {
 }
 
 /* ── Plan launch + question/answer flow ── */
+var _activePlans = {};
 function launchPlan(storyId, title) {
+  if (_activePlans[storyId]) return; // already running
+  _activePlans[storyId] = true;
   const overlay = cel('div', 'spec-overlay');
   const panel = cel('div', 'spec-panel');
 
   const header = cel('div', 'spec-header');
   header.appendChild(cel('span', 'spec-header-title', '#' + storyId + ' \u2014 ' + title));
   const closeBtn = cel('button', 'spec-close', '\u2715');
-  closeBtn.onclick = function() { clearInterval(pollTimer); overlay.remove(); };
+  closeBtn.onclick = function() { clearInterval(pollTimer); delete _activePlans[storyId]; overlay.remove(); };
   header.appendChild(closeBtn);
   panel.appendChild(header);
 
@@ -769,12 +779,12 @@ function launchPlan(storyId, title) {
 
   const footer = cel('div', 'spec-footer');
   const cancelBtn = cel('button', 'btn-cancel', 'Luk');
-  cancelBtn.onclick = function() { clearInterval(pollTimer); overlay.remove(); };
+  cancelBtn.onclick = function() { clearInterval(pollTimer); delete _activePlans[storyId]; overlay.remove(); };
   footer.appendChild(cancelBtn);
   panel.appendChild(footer);
 
   overlay.appendChild(panel);
-  overlay.onclick = function(e) { if (e.target === overlay) { clearInterval(pollTimer); overlay.remove(); } };
+  overlay.onclick = function(e) { if (e.target === overlay) { clearInterval(pollTimer); delete _activePlans[storyId]; overlay.remove(); } };
   document.body.appendChild(overlay);
 
   // Launch the plan agent
@@ -812,7 +822,7 @@ function launchPlan(storyId, title) {
           if (mapped) {
             clearInterval(pollTimer);
             body.innerHTML = '<div class="q-progress" style="color:var(--green)">\u2713 Analyse f\u00e6rdig \u2014 story er nu planlagt.</div>';
-            setTimeout(() => { overlay.remove(); location.reload(); }, 2000);
+            setTimeout(() => { delete _activePlans[storyId]; overlay.remove(); location.reload(); }, 2000);
           }
         }).catch(() => {});
       } else if (ag.active) {
@@ -850,7 +860,7 @@ function launchPlan(storyId, title) {
           if (mapped) {
             clearInterval(pollTimer);
             body.innerHTML = '<div class="q-progress" style="color:var(--green)">\u2713 Analyse f\u00e6rdig.</div>';
-            setTimeout(() => { overlay.remove(); location.reload(); }, 2000);
+            setTimeout(() => { delete _activePlans[storyId]; overlay.remove(); location.reload(); }, 2000);
           }
         }).catch(() => {});
       }
