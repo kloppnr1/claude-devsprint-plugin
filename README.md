@@ -116,6 +116,33 @@ Will execute:
      PR: https://dev.azure.com/.../pullrequest/187
 ```
 
+Review the PR in Azure DevOps. Leave comments on anything that needs fixing, then:
+
+```
+> /devsprint-pr-fix 3040
+
+=== PR #187: #3040 Add dark mode toggle to settings page ===
+Status: active
+Branch: feature/3040-dark-mode-toggle -> develop
+
+=== Unresolved Review Comments (2) ===
+
+File: src/Api/Models/UserProfile.cs
+  Line 24: "Should default to false, not null"
+
+File: src/Web/pages/Settings.tsx
+  Line 89: "Use the existing ToggleSwitch component instead of a raw checkbox"
+
+Fixing all 2 comments...
+  ✓ Fixed UserProfile.cs — changed DarkMode default to false
+  ✓ Fixed Settings.tsx — replaced checkbox with ToggleSwitch component
+  Tests: 22 passed, 0 failed
+
+=== PR Fix Complete ===
+Fixes pushed: 2 commits
+PR: https://dev.azure.com/.../pullrequest/187
+```
+
 ### Batch mode — plan and execute an entire sprint
 
 Skip the story ID and it processes everything autonomously. Walk away and come back to PRs.
@@ -210,6 +237,16 @@ All pull requests:
   https://dev.azure.com/.../pullrequest/187
   https://dev.azure.com/.../pullrequest/188
   https://dev.azure.com/.../pullrequest/189
+```
+
+Review the PRs in Azure DevOps, leave comments, then fix them one by one:
+
+```
+> /devsprint-pr-fix 3044
+  ... fixes 3 review comments, pushes ...
+
+> /devsprint-pr-fix 3048
+  ... fixes 1 review comment, pushes ...
 ```
 
 ## Quick start
