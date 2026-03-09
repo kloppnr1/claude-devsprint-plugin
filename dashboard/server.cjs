@@ -389,7 +389,7 @@ async function handleRequest(req, res) {
             const cleanEnv = Object.assign({}, process.env);
             delete cleanEnv.CLAUDECODE;
             const execBat = path.join(CWD, '.planning', '_run_exec.bat');
-            fs.writeFileSync(execBat, `@echo off\nset "CLAUDECODE="\ncd /d "${CWD}"\nclaude -p "/devsprint-execute ${storyId} --headless" --dangerously-skip-permissions --verbose\npause\n`);
+            fs.writeFileSync(execBat, `@echo off\nset "CLAUDECODE="\ncd /d "${CWD}"\nclaude -p "/devsprint-execute ${storyId} --headless" --dangerously-skip-permissions --verbose\n`);
             execFn(`start cmd /k "${execBat}"`, { shell: true });
             data = { status: 'launched', storyId };
           } else {
@@ -412,7 +412,7 @@ async function handleRequest(req, res) {
             const planEnv = Object.assign({}, process.env);
             delete planEnv.CLAUDECODE;
             const planBat = path.join(CWD, '.planning', '_run_plan.bat');
-            fs.writeFileSync(planBat, `@echo off\nset "CLAUDECODE="\ncd /d "${CWD}"\nclaude -p "/devsprint-plan ${planId} --headless --reanalyze" --dangerously-skip-permissions --verbose\npause\n`);
+            fs.writeFileSync(planBat, `@echo off\nset "CLAUDECODE="\ncd /d "${CWD}"\nclaude -p "/devsprint-plan ${planId} --headless --reanalyze" --dangerously-skip-permissions --verbose\n`);
             planExec(`start cmd /k "${planBat}"`, { shell: true });
             data = { status: 'launched', storyId: planId };
           } else {
