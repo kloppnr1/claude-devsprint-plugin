@@ -5,6 +5,147 @@ An Azure DevOps plugin for [Claude Code](https://docs.anthropic.com/en/docs/clau
 Point it at your sprint, and it will read your stories, analyze the relevant repos, write implementation plans, generate code, create PRs, and resolve tasks — all without leaving your terminal. Run `/devsprint-execute` and walk away. Come back to pull requests linked to your stories, tasks marked as resolved, and a summary of everything it did.
 Your sprint board stays in sync because the plugin updates it as it works.
 
+## What it looks like
+
+### View your sprint board
+
+```
+> /devsprint-sprint
+
+━━━ Sprint: Sprint 39 - 2026 ━━━
+Dates:     2026-03-02 → 2026-03-13
+Items:     12
+
+┌─ [US] #42876 — Brugerønsker
+│  State: ACTIVE  │  Assigned: Jane Smith
+│
+│   ■ #42912 — Download forbrug fra forbrugssektionen        [DONE]
+│   ■ #42913 — Check "Åbn Xellent" for inaktive kunder      [DONE]
+│   ■ #42914 — Vis fakturatype i fakturasektionen            [DONE]
+│   ■ #42915 — Vis betalingsstatus i fakturasektionen        [NEW]
+└──────
+
+┌─ [US] #42920 — CSV-eksport af kundedata
+│  State: NEW  │  Assigned: Jane Smith
+│
+│   ■ #42922 — Backend: CSV endpoint                         [NEW]
+│   ■ #42923 — Frontend: Download-knap                       [NEW]
+│   ■ #42924 — Tests for CSV-logik                           [NEW]
+└──────
+```
+
+### Create stories from natural language
+
+```
+> /devsprint-create Implementer CSV-eksport: 1) Backend endpoint 2) Frontend knap 3) Tests
+
+Creating:
+  [User Story] "Implementer CSV-eksport"
+    [Task] "Backend: Opret CSV endpoint"
+    [Task] "Frontend: Tilføj download-knap"
+    [Task] "Tests: Skriv tests for CSV-logik"
+
+╔══════════════════════════════════════════╗
+║  Story #42950 oprettet                   ║
+╚══════════════════════════════════════════╝
+
+  ✓ #42950 [User Story] "Implementer CSV-eksport"
+    ✓ #42951 [Task] "Backend: Opret CSV endpoint"
+    ✓ #42952 [Task] "Frontend: Tilføj download-knap"
+    ✓ #42953 [Task] "Tests: Skriv tests for CSV-logik"
+
+Sprint: Sprint 39 - 2026
+
+Next step: /devsprint-plan 42950 to analyze and create spec.
+```
+
+### Plan a story — analyze repo, generate spec
+
+```
+> /devsprint-plan 42920
+
+=== Analysis: Sprint 39 - 2026 ===
+
+#42920 → CustomerPortal (from task map)
+
+### #42920 — CSV-eksport af kundedata (New)
+
+My understanding:
+  Export customer data as CSV from the Bifrost portal. Backend endpoint
+  returns CSV with configurable columns, frontend adds download button.
+
+Work type: Code change
+Target repo: CustomerPortal
+
+Repo analysis:
+  Tech stack: C# / .NET 8 + React 18 / TypeScript
+  Key files:
+    src/Api/Controllers/CustomerController.cs — existing customer endpoints
+    src/Api/Services/CustomerService.cs — business logic
+    src/Web/components/CustomerList.tsx — customer table component
+  Code flow: CustomerController → CustomerService → CustomerRepository
+
+STORY.md written to CustomerPortal/.planning/stories/42920.md
+
+Ændringer?
+> ok
+
+Planning complete. Run /devsprint-execute 42920 to implement.
+```
+
+### Execute — autonomous implementation
+
+```
+> /devsprint-execute
+
+╔══════════════════════════════════════════════════════╗
+║              Pre-flight Status Check                 ║
+╚══════════════════════════════════════════════════════╝
+
+Already completed:
+  ✓ #42876 — Brugerønsker
+    Executed: 2026-03-07 | PR: https://dev.azure.com/.../pullrequest/891
+
+Skipping:
+  ⊘ #42907 — BLOKERET: Hjerting Vand - Migrering
+
+Will execute:
+  → #42920 — CSV-eksport af kundedata
+    State: New | Tasks: 0/3 done | Repo: CustomerPortal
+
+Summary: 1 to execute, 1 already done, 1 skipped
+
+━━━ [1/1] Story #42920 — CSV-eksport af kundedata ━━━
+
+  Baseline tests green — proceeding.
+  Created branch feature/42920-csv-eksport from develop
+
+  Task status updates:
+    #42922 (Backend: CSV endpoint): Active ✓
+    #42923 (Frontend: Download-knap): Active ✓
+    #42924 (Tests for CSV-logik): Active ✓
+
+  ... implementing ...
+
+  Task resolution:
+    #42922 (Backend: CSV endpoint): Resolved ✓
+    #42923 (Frontend: Download-knap): Resolved ✓
+    #42924 (Tests for CSV-logik): Resolved ✓
+
+  Story #42920 resolved ✓
+
+╔══════════════════════════════════════════╗
+║           Execution Complete             ║
+╚══════════════════════════════════════════╝
+
+  ✓ #42920 — CSV-eksport af kundedata
+     Branch: feature/42920-csv-eksport
+     Tasks: 3/3 resolved
+     Tests: 14 passed, 0 failed (dotnet test) — all passed
+     Story: Resolved ✓
+     PR: https://dev.azure.com/.../pullrequest/894
+```
+
 ## What can it do?
 
 - **View your sprint** from the terminal — stories, tasks, state, descriptions, all color-coded
@@ -12,6 +153,7 @@ Your sprint board stays in sync because the plugin updates it as it works.
 - **Analyze stories** — reads the target repo, traces code paths, identifies the files that need changes, and writes a detailed implementation spec
 - **Execute stories autonomously** — creates a feature branch, writes the code, runs tests, commits, pushes, creates a PR linked to the story, and resolves all tasks
 - **Batch mode** — run `/devsprint-execute` with no arguments and it loops through every story in your sprint. Errors on one story don't block the next
+- **Fix PR comments** — `/devsprint-pr-fix <story-id>` fetches review comments, fixes them, and pushes
 
 Zero external dependencies. Just Node.js built-ins and the Azure DevOps REST API.
 
@@ -21,14 +163,15 @@ Zero external dependencies. Just Node.js built-ins and the Azure DevOps REST API
 /devsprint-setup              →  Connect to Azure DevOps (one-time)
 /devsprint-sprint             →  See your sprint board
 /devsprint-create <description> → Create stories & tasks from natural language
-/devsprint-plan [story-id]    →  Analyze stories → pick repos → verify → generate specs
+/devsprint-plan [story-id]    →  Analyze stories → generate specs
 /devsprint-execute [story-id] →  Implement, commit, push, create PR, resolve tasks
+/devsprint-pr-fix <story-id>  →  Fix PR review comments automatically
 ```
 
 **The typical workflow:**
 1. `/devsprint-sprint` — see what's in the sprint
 2. `/devsprint-create` — add missing stories or tasks (optional)
-3. `/devsprint-plan` — analyze stories, pick repos, verify understanding, generate implementation specs
+3. `/devsprint-plan` — analyze stories, auto-detect repos, generate implementation specs
 4. `/devsprint-execute` — implement everything, create PRs, resolve tasks automatically
 
 ## Prerequisites
@@ -44,7 +187,8 @@ Zero external dependencies. Just Node.js built-ins and the Azure DevOps REST API
 ## Installation
 
 ```bash
-git clone <this-repo> && cd claude-devsprint-plugin
+git clone https://github.com/kloppnr1/claude-devsprint-plugin.git
+cd claude-devsprint-plugin
 ./install.sh
 ```
 
@@ -97,7 +241,7 @@ Defaults to showing only your assigned items (`--me`). Use `--all` to see the en
 
 ### `/devsprint-create <description>`
 
-Create stories and tasks from a natural language description. Parses your intent, shows a plan for confirmation, then creates work items via the Azure DevOps API — all assigned to the current sprint.
+Create stories and tasks from a natural language description. Parses your intent, creates work items via the Azure DevOps API — all assigned to the current sprint.
 
 Examples:
 - `/devsprint-create Tilføj prisområde-kolonne til kundelisten` — creates a single User Story
@@ -106,18 +250,18 @@ Examples:
 
 ### `/devsprint-plan [story-id]`
 
-The main analysis pipeline. Run without arguments to plan all assigned stories, or pass a story ID to plan a single story (e.g., `/devsprint-plan 42920`). Already resolved stories are automatically skipped.
+The main analysis pipeline. Run without arguments to plan all assigned stories, or pass a story ID to plan a single story (e.g., `/devsprint-plan 42920`). Already resolved stories are automatically skipped. Previously analyzed stories are skipped unless `--reanalyze` is passed.
 
 **What it does, step by step:**
 
 1. **Fetch stories** — pulls your assigned stories from the current sprint via Azure DevOps API
-2. **Pick repos** — lists Azure DevOps project repos and asks which one each story belongs to. Resolves the local clone path automatically (scans sibling directories of `$CWD`)
+2. **Auto-detect repos** — checks task map history, sibling directories, and project repos. Only asks the user when auto-detection fails (first time for a new repo)
 3. **Deep repo analysis** — for each story, searches the target repo for files matching story keywords, reads relevant code, traces call chains, and checks for existing feature branches
-4. **Interactive verification** — presents its understanding of each story (summary, work type, repo analysis, tasks) and asks you to confirm or correct. If the story description is sparse, asks targeted follow-up questions instead of guessing
+4. **Show analysis** — presents its understanding of each story (summary, work type, repo analysis, tasks). Non-research stories continue automatically; research stories get an interactive dialogue
 5. **Update Azure DevOps** — replaces the story description and acceptance criteria with the verified analysis (see warning below)
 6. **Generate story spec** — writes `STORY.md` to `{repoPath}/.planning/stories/{storyId}.md` with: goal, background, testable acceptance criteria, key files with paths, architecture/code flow, implementation notes, contacts, open questions, and out-of-scope items
 7. **Self-review** — checks the generated spec against a quality checklist (specific goal, real file paths, traced code flow, no vague placeholders, blockers captured) and fixes issues before presenting
-8. **User approval** — shows the full spec for approve/changes/skip
+8. **Spec review** — shows the full spec and asks "Ændringer?" — type corrections or "ok" to continue
 9. **Post to Azure DevOps** — adds a summary of the approved spec as a comment on the story
 10. **Task map** — writes/merges `.planning/devsprint-task-map.json` mapping story IDs → repos → task IDs for status tracking during execution
 
@@ -125,22 +269,22 @@ The main analysis pipeline. Run without arguments to plan all assigned stories, 
 
 **Research mode:** Stories tagged with `research` in Azure DevOps get a deeper treatment — broader codebase exploration, a multi-round dialogue where you discuss findings and possible approaches together, and a STORY.md that includes a "Research Findings" section with problem analysis, approaches considered, and the agreed approach.
 
-### `/devsprint-pr-fix <story-id>`
-
-Fix PR review comments. Takes a story ID, finds the matching PR automatically (by title prefix `#{storyId}`), fetches active review comments, checks out the PR branch, and fixes the issues.
-
-```
-/devsprint-pr-fix 42917
-```
-
 ### `/devsprint-execute [story-id]`
 
 Execute story plans. Two modes depending on arguments:
 
-- **`/devsprint-execute 42920`** — single story, interactive. Creates a feature branch, implements the story spec, resolves tasks, creates a PR. Asks for input on blockers.
+- **`/devsprint-execute 42920`** — single story. Creates a feature branch, implements the story spec, resolves tasks, creates a PR. Mostly autonomous — only asks for input on items explicitly marked as blocking in the spec.
 - **`/devsprint-execute`** — all stories, fully autonomous. Loops through every story in the task map without user interaction. Errors on one story don't block the next. Outputs a full summary with all PR links at the end.
 
 PRs are created via the Azure DevOps REST API and automatically linked to the story via `workItemRefs`.
+
+### `/devsprint-pr-fix <story-id>`
+
+Fix PR review comments. Takes a story ID, finds the matching PR automatically (by title prefix `#{storyId}`), fetches unresolved review comments, checks out the PR branch, fixes all issues, runs tests, and pushes.
+
+```
+/devsprint-pr-fix 42917
+```
 
 ## Helper script CLI
 
@@ -203,6 +347,7 @@ claude-devsprint-plugin/
 │   ├── devsprint-plan.md             # /devsprint-plan — story analysis & spec generation
 │   ├── devsprint-execute.md          # /devsprint-execute — story execution & PR creation
 │   └── devsprint-pr-fix.md           # /devsprint-pr-fix — fix PR review comments
+├── CONTRIBUTING.md
 └── README.md
 ```
 
