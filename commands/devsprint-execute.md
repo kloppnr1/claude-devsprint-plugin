@@ -253,6 +253,20 @@ Launch an Agent with the full execution instructions for this single story (Step
 - Instruction to verify the FULL test suite passes BEFORE writing any code (baseline check on base branch). If tests fail, skip the story.
 - Instruction to run the FULL test suite (`dotnet test` / `npm test` / `pytest`) after all implementation — not just new tests. All tests must pass before resolving tasks.
 - Instruction to return a JSON summary: `{"storyId": N, "status": "completed|partial|skipped", "branch": "...", "prUrl": "...", "tasksResolved": [...], "tasksRemaining": [...], "testsPassed": N, "testsFailed": N, "testCommand": "...", "testSuiteStatus": "all passed|failures|no test infrastructure", "error": "..."}`
+- **Dashboard status reporting** — the agent MUST report its progress to the dashboard at each major step by running:
+  `node ~/.claude/bin/devsprint-tools.cjs report-status --story-id {storyId} --story-title "{storyTitle}" --step "<step>" --detail "<detail>" --repo "{repoName}" --cwd $CWD`
+  Report status at these points:
+  - Step 4a: `--step "Checking story state" --detail "Fetching child states from Azure DevOps"`
+  - Step 4b: `--step "Loading story spec" --detail "Reading {storyId}.md"`
+  - Step 4b.1: `--step "Running baseline tests" --detail "{testCommand}" --command "{testCommand}"`
+  - Step 4c: `--step "Creating feature branch" --detail "feature/{storyId}-..." --branch "feature/{storyId}-..."`
+  - Step 4d: `--step "Activating tasks" --detail "Setting {N} tasks to Active"`
+  - Step 4e (RED): `--step "Writing tests (RED)" --detail "Writing failing tests for {taskTitle}"`
+  - Step 4e (GREEN): `--step "Implementing (GREEN)" --detail "Making tests pass for {taskTitle}"`
+  - Step 4e (full suite): `--step "Running full test suite" --detail "{testCommand}" --command "{testCommand}"`
+  - Step 4f: `--step "Resolving tasks" --detail "Resolving {N} tasks in Azure DevOps"`
+  - Step 4g: `--step "Creating PR" --detail "Pushing and creating pull request"`
+  - Step 4h: `--step "Complete" --detail "Story #{storyId} finished"`
 
 **Mode-specific agent instructions:**
 - `all` mode: Include instruction to NEVER use `AskUserQuestion` — fully autonomous. On blockers, make best judgment and continue.
@@ -514,7 +528,12 @@ All pull requests (this run + previous):
   {list of PR URLs from executionResults + executionLog}
 
 Execution log: .planning/devsprint-execution-log.json
+```
 
+**Clear agent dashboard status** after the summary is displayed:
+Run `node ~/.claude/bin/devsprint-tools.cjs clear-status --cwd $CWD` to mark the agent as idle in the dashboard.
+
+```
 Next steps:
   {If tasks remain: "Run `/devsprint-execute {storyId}` to continue on remaining tasks."}
   {If all resolved: "Review and merge the PRs, then run `/devsprint-sprint` to see updated sprint status."}

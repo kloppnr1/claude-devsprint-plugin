@@ -709,6 +709,84 @@ async function cmdGetTeamArea(cwd, args) {
 }
 
 /**
+ * Handles the report-status command.
+ * Writes agent status to .planning/devsprint-agent-status.json for dashboard consumption.
+ * @param {string} cwd - Working directory
+ * @param {string[]} args - CLI args: --story-id, --story-title, --step, --detail, --repo, --branch, --command
+ */
+function cmdReportStatus(cwd, args) {
+  const get = (name) => { const i = args.indexOf(name); return i !== -1 && args[i + 1] ? args[i + 1] : null; };
+
+  const statusPath = path.join(cwd, '.planning', 'devsprint-agent-status.json');
+  const planningDir = path.dirname(statusPath);
+  if (!fs.existsSync(planningDir)) fs.mkdirSync(planningDir, { recursive: true });
+
+  // Read existing status to preserve history
+  let existing = { active: null, history: [] };
+  try {
+    if (fs.existsSync(statusPath)) existing = JSON.parse(fs.readFileSync(statusPath, 'utf-8'));
+  } catch {}
+
+  const storyId = get('--story-id');
+  const now = new Date().toISOString();
+
+  // Build top-level status (reflects most recent update)
+  const status = {
+    storyId: storyId ? parseInt(storyId, 10) : (existing.active ? existing.active.storyId : null),
+    storyTitle: get('--story-title') || (existing.active ? existing.active.storyTitle : null),
+    step: get('--step') || 'unknown',
+    detail: get('--detail') || null,
+    repo: get('--repo') || (existing.active ? existing.active.repo : null),
+    branch: get('--branch') || (existing.active ? existing.active.branch : null),
+    command: get('--command') || null,
+    startedAt: existing.active ? existing.active.startedAt : now,
+    updatedAt: now,
+    // Preserve per-story tracking map from previous state
+    stories: existing.active && existing.active.stories ? { ...existing.active.stories } : {},
+  };
+
+  // If story-id is provided, upsert into per-story map
+  if (storyId) {
+    const sid = String(storyId);
+    const prev = status.stories[sid];
+    status.stories[sid] = {
+      storyId: parseInt(storyId, 10),
+      storyTitle: get('--story-title') || (prev ? prev.storyTitle : null),
+      step: get('--step') || 'unknown',
+      detail: get('--detail') || null,
+      updatedAt: now,
+    };
+  }
+
+  const output = { active: status, history: existing.history || [] };
+  fs.writeFileSync(statusPath, JSON.stringify(output, null, 2), 'utf-8');
+  console.log(JSON.stringify({ status: 'reported', step: status.step }));
+  process.exit(0);
+}
+
+/**
+ * Handles the clear-status command.
+ * Archives the current active status and clears it.
+ * @param {string} cwd - Working directory
+ */
+function cmdClearStatus(cwd) {
+  const statusPath = path.join(cwd, '.planning', 'devsprint-agent-status.json');
+  let existing = { active: null, history: [] };
+  try {
+    if (fs.existsSync(statusPath)) existing = JSON.parse(fs.readFileSync(statusPath, 'utf-8'));
+  } catch {}
+
+  if (existing.active) {
+    existing.history.unshift({ ...existing.active, endedAt: new Date().toISOString() });
+    if (existing.history.length > 20) existing.history = existing.history.slice(0, 20);
+  }
+  existing.active = null;
+  fs.writeFileSync(statusPath, JSON.stringify(existing, null, 2), 'utf-8');
+  console.log(JSON.stringify({ status: 'cleared' }));
+  process.exit(0);
+}
+
+/**
  * Handles the load-config command.
  * Loads config and outputs JSON with decoded PAT.
  * @param {string} cwd - Working directory
@@ -2384,6 +2462,14 @@ async function main() {
 
     case 'get-team-area':
       await cmdGetTeamArea(cwd, cmdArgs);
+      break;
+
+    case 'report-status':
+      cmdReportStatus(cwd, cmdArgs);
+      break;
+
+    case 'clear-status':
+      cmdClearStatus(cwd);
       break;
 
     default:

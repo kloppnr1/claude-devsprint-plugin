@@ -98,6 +98,43 @@ Check for the `--reanalyze` flag in the arguments:
 2. Run `node ~/.claude/bin/devsprint-tools.cjs load-config --cwd $CWD`.
    If exit 1: tell the user "No Azure DevOps config found. Run `/devsprint-setup` to configure your connection." Stop.
 
+**Step 1.5 — Dashboard status reporting (applies to ALL steps):**
+
+Report status to the dashboard at EVERY major step by running:
+`node ~/.claude/bin/devsprint-tools.cjs report-status --step "{step}" --detail "{detail}" --cwd $CWD`
+
+If a story is being processed, always include: `--story-id {storyId} --story-title "{storyTitle}"`
+
+Report at these points:
+- Step 2: `--step "Fetching sprint" --detail "Loading sprint metadata"`
+- Step 3: `--step "Loading stories" --detail "Fetching assigned work items"`
+- Step 3.5: `--step "Checking existing" --detail "Checking for previous analysis"`
+- Step 4: `--step "Resolving repo" --detail "Auto-detecting target repo for #{storyId}"`
+- Step 4.5: `--step "Analyzing repo" --detail "Scanning {repoName} for #{storyId}"`
+- Step 5.5: `--step "Verifying understanding" --detail "#{storyId} {short title}"`
+- Step 5.6: `--step "Updating DevOps" --detail "Writing description for #{storyId}"`
+- Step 8: `--step "Generating spec" --detail "Writing STORY.md for #{storyId}"`
+- Step 10.5: `--step "Self-review" --detail "Validating spec quality for #{storyId}"`
+- Step 11: `--step "Awaiting review" --detail "Presenting #{storyId} for approval"`
+- Step 11.1: `--step "Posting to DevOps" --detail "Adding spec comment to #{storyId}"`
+- Step 11.5: `--step "Writing task map" --detail "Updating devsprint-task-map.json"`
+
+**CRITICAL — Sub-agent status reporting:**
+When you launch sub-agents (e.g., for parallel repo analysis or spec generation), EACH agent's prompt MUST include the `report-status` command and instructions to call it at key points. Include this in every agent prompt:
+```
+DASHBOARD STATUS: Report your progress by running this command at each major step:
+  node ~/.claude/bin/devsprint-tools.cjs report-status --story-id {storyId} --story-title "{storyTitle}" --step "<step>" --detail "<detail>" --cwd {$CWD}
+
+Report at these points:
+  - Starting analysis: --step "Analyzing repo" --detail "Scanning {repoName} for #{storyId}"
+  - Found key files: --step "Analyzing repo" --detail "Mapping code flow for #{storyId}"
+  - Checking existing branch: --step "Analyzing repo" --detail "Checking branches for #{storyId}"
+  - Writing spec: --step "Generating spec" --detail "Writing STORY.md for #{storyId}"
+  - Updating DevOps: --step "Updating DevOps" --detail "Writing description for #{storyId}"
+  - Posting comment: --step "Posting to DevOps" --detail "Adding spec comment to #{storyId}"
+```
+Without this, the dashboard status will go STALE during parallel agent work. Every agent MUST report status.
+
 **Step 2 — Fetch sprint metadata:**
 
 Run `node ~/.claude/bin/devsprint-tools.cjs get-sprint --cwd $CWD`.
@@ -593,6 +630,10 @@ Next steps:
 ```
 
 If `singleStoryMode`: simplify the summary to just show the single story result.
+
+**Step 12.5 — Clear dashboard status:**
+
+Run `node ~/.claude/bin/devsprint-tools.cjs clear-status --cwd $CWD` to mark the agent as idle.
 
 **Step 13 — Prompt to start execution:**
 

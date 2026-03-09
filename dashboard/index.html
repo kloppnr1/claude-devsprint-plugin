@@ -1,0 +1,972 @@
+<!DOCTYPE html>
+<html lang="da">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DevSprint</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #f4f2ef;
+    --white: #ffffff;
+    --card: #ffffff;
+    --border: #e4e0da;
+    --border-light: #ece9e3;
+    --text: #1a1a1a;
+    --text2: #4a4640;
+    --dim: #8a857d;
+    --mute: #b5b0a8;
+    --indigo: #4338ca;
+    --indigo-light: #eef2ff;
+    --green: #16a34a;
+    --green-light: #f0fdf4;
+    --red: #dc2626;
+    --red-light: #fef2f2;
+    --amber: #d97706;
+    --amber-light: #fffbeb;
+    --blue: #2563eb;
+    --blue-light: #eff6ff;
+    --purple: #7c3aed;
+    --purple-light: #f5f3ff;
+    --cyan: #0891b2;
+    --cyan-light: #ecfeff;
+    --mono: 'IBM Plex Mono', monospace;
+    --sans: 'Plus Jakarta Sans', system-ui, sans-serif;
+    --shadow: 0 1px 3px rgba(0,0,0,0.04), 0 1px 2px rgba(0,0,0,0.03);
+    --shadow-lg: 0 4px 12px rgba(0,0,0,0.06);
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family: var(--sans); background: var(--bg); color: var(--text); font-size: 13px; line-height: 1.5; -webkit-font-smoothing: antialiased; }
+
+  /* ── Top Bar ── */
+  .topbar {
+    background: var(--white); border-bottom: 1px solid var(--border);
+    padding: 0 28px; height: 48px;
+    display: flex; align-items: center; justify-content: space-between;
+    position: sticky; top: 0; z-index: 100;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.03);
+  }
+  .topbar-l { display: flex; align-items: center; gap: 20px; }
+  .brand {
+    font-family: var(--mono); font-size: 13px; font-weight: 600;
+    letter-spacing: -0.3px; color: var(--indigo);
+  }
+  .sprint-info { display: flex; align-items: center; gap: 10px; font-size: 12px; color: var(--dim); }
+  .sprint-info .name { color: var(--text2); font-weight: 600; }
+  .btn-refresh {
+    background: var(--white); border: 1px solid var(--border); color: var(--dim);
+    padding: 5px 14px; border-radius: 6px; cursor: pointer;
+    font-size: 11px; font-family: var(--mono); font-weight: 500;
+    transition: all 0.15s;
+  }
+  .btn-refresh:hover { border-color: var(--indigo); color: var(--indigo); background: var(--indigo-light); }
+
+  /* ── Shell ── */
+  .shell { max-width: 960px; margin: 0 auto; padding: 20px 24px 48px; }
+
+  /* ── Agent Banner (hidden when idle) ── */
+  .agent-banner {
+    background: var(--indigo-light); border: 1px solid #c7d2fe; border-radius: 10px;
+    margin-bottom: 16px; overflow: hidden;
+    animation: slideDown 0.3s ease-out;
+  }
+  @keyframes slideDown { from { opacity:0; transform:translateY(-8px); } to { opacity:1; transform:translateY(0); } }
+  .ab-main { padding: 12px 16px; display: flex; align-items: center; gap: 10px; }
+  .agent-banner.idle { background: var(--card); border-color: var(--border-light); opacity: 0.7; }
+  .ab-pulse {
+    width: 8px; height: 8px; border-radius: 50%; background: var(--indigo);
+    box-shadow: 0 0 0 3px rgba(67,56,202,0.2);
+    animation: livePulse 2s ease-in-out infinite;
+  }
+  .ab-pulse.idle { background: var(--mute); box-shadow: none; animation: none; }
+  .ab-label.idle { color: var(--mute); }
+  @keyframes livePulse { 0%,100%{box-shadow:0 0 0 3px rgba(67,56,202,0.2)} 50%{box-shadow:0 0 0 6px rgba(67,56,202,0.1)} }
+  .ab-label {
+    font-family: var(--mono); font-size: 10px; font-weight: 600;
+    color: var(--indigo); letter-spacing: 0.8px; text-transform: uppercase;
+  }
+  .ab-story { font-size: 13px; font-weight: 600; color: var(--text); flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .ab-story .id { color: var(--indigo); font-family: var(--mono); font-size: 12px; margin-right: 4px; }
+  .ab-time { font-family: var(--mono); font-size: 11px; color: var(--dim); }
+  .ab-detail { padding: 0 16px 10px 34px; display: flex; align-items: center; gap: 8px; }
+  .ab-step {
+    font-family: var(--mono); font-size: 9px; font-weight: 600;
+    padding: 2px 8px; border-radius: 4px; background: rgba(67,56,202,0.1);
+    color: var(--indigo); text-transform: uppercase; letter-spacing: 0.3px;
+  }
+  .ab-desc { font-size: 11px; color: var(--dim); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; }
+  .ab-progress { display: flex; gap: 2px; padding: 0 16px 12px 34px; }
+  .ab-bar { height: 3px; flex: 1; border-radius: 2px; background: #c7d2fe; }
+  .ab-bar.done { background: var(--indigo); opacity: 0.5; }
+  .ab-bar.now { background: var(--indigo); animation: livePulse 2s ease-in-out infinite; }
+  .ab-stories { padding: 0 16px 8px 34px; display: flex; flex-direction: column; gap: 3px; }
+  .ab-srow { display: flex; align-items: center; gap: 8px; font-size: 11px; }
+  .ab-srow .id { color: var(--indigo); font-family: var(--mono); font-size: 10px; min-width: 50px; }
+  .ab-srow .name { color: var(--text2); flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 200px; }
+  .ab-srow .ab-sstep { font-family: var(--mono); font-size: 8px; font-weight: 600; padding: 1px 6px; border-radius: 3px; background: rgba(67,56,202,0.1); color: var(--indigo); text-transform: uppercase; letter-spacing: 0.3px; }
+  .ab-srow .ab-sdesc { color: var(--dim); font-size: 10px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; }
+  @keyframes storyPulse { 0%,100%{box-shadow:inset 2px 0 0 var(--indigo)} 50%{box-shadow:inset 2px 0 0 rgba(67,56,202,0.3)} }
+  .story-row.story-live { animation: storyPulse 2s ease-in-out infinite; background: var(--indigo-light); }
+
+  /* ── Stats ── */
+  .stats { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; margin-bottom: 20px; }
+  .stat {
+    background: var(--card); border: 1px solid var(--border-light); border-radius: 10px;
+    padding: 12px 16px; box-shadow: var(--shadow);
+  }
+  .stat-label {
+    font-size: 11px; color: var(--dim); font-weight: 500; margin-bottom: 2px;
+  }
+  .stat-val { font-family: var(--mono); font-size: 26px; font-weight: 600; line-height: 1.1; }
+
+  /* ── Repo Card ── */
+  .repo-card {
+    background: var(--card); border: 1px solid var(--border-light); border-radius: 10px;
+    margin-bottom: 12px; overflow: hidden; box-shadow: var(--shadow);
+  }
+  .repo-header {
+    padding: 10px 16px; display: flex; align-items: center; gap: 10px;
+    background: var(--bg); border-bottom: 1px solid var(--border-light);
+  }
+  .repo-icon { font-size: 14px; opacity: 0.5; }
+  .repo-name {
+    font-family: var(--mono); font-size: 12px; font-weight: 600;
+    color: var(--text); flex: 1;
+  }
+  .repo-badges { display: flex; gap: 4px; }
+  .badge {
+    font-family: var(--mono); font-size: 9px; font-weight: 600;
+    padding: 2px 7px; border-radius: 4px; letter-spacing: 0.2px;
+  }
+  .badge-count { background: var(--indigo-light); color: var(--indigo); }
+  .badge-branch { background: var(--purple-light); color: var(--purple); }
+  .badge-dirty { background: var(--amber-light); color: var(--amber); }
+
+  /* ── Story Row ── */
+  .story-row {
+    padding: 8px 16px; display: flex; align-items: center; gap: 8px;
+    border-bottom: 1px solid var(--border-light);
+    cursor: pointer; transition: background 0.1s;
+  }
+  .story-row:last-child { border-bottom: none; }
+  .story-row:hover { background: #faf9f7; }
+  .s-id {
+    font-family: var(--mono); font-size: 10px; color: var(--mute);
+    min-width: 40px; flex-shrink: 0;
+  }
+  .s-title {
+    font-size: 12.5px; font-weight: 500; color: var(--text2); flex: 1;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  /* Inline indicators — visible without expanding */
+  .s-indicators { display: flex; align-items: center; gap: 4px; flex-shrink: 0; }
+  .ind {
+    font-family: var(--mono); font-size: 8px; font-weight: 600;
+    padding: 1px 6px; border-radius: 3px; letter-spacing: 0.2px;
+    text-transform: uppercase;
+  }
+  .ind-live { background: var(--indigo-light); color: var(--indigo); }
+  .ind-planned { background: var(--purple-light); color: var(--purple); }
+  .ind-pr-active { background: var(--blue-light); color: var(--blue); }
+  .ind-pr-merged { background: var(--green-light); color: var(--green); }
+  .ind-pr-rejected { background: var(--red-light); color: var(--red); }
+  .ind-done { background: var(--green-light); color: var(--green); }
+  .ind-partial { background: var(--amber-light); color: var(--amber); }
+  .s-state {
+    font-family: var(--mono); font-size: 9px; font-weight: 600;
+    padding: 2px 8px; border-radius: 4px; white-space: nowrap;
+  }
+  .st-new { background: var(--cyan-light); color: var(--cyan); }
+  .st-active { background: var(--blue-light); color: var(--blue); }
+  .st-resolved { background: var(--green-light); color: var(--green); }
+  .st-closed { background: var(--green-light); color: var(--green); }
+  .st-removed { background: var(--red-light); color: var(--red); }
+
+  /* ── Story Detail (expanded) ── */
+  .story-detail {
+    padding: 8px 16px 10px 56px; background: #faf9f7;
+    border-bottom: 1px solid var(--border-light);
+  }
+  .detail-sec { margin-bottom: 6px; }
+  .detail-sec:last-child { margin-bottom: 0; }
+  .detail-label {
+    font-family: var(--mono); font-size: 9px; font-weight: 600;
+    color: var(--mute); text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 1px;
+  }
+  .detail-row {
+    display: flex; align-items: center; gap: 6px;
+    font-size: 11px; color: var(--text2); padding: 2px 0;
+  }
+  .d-dot { width: 5px; height: 5px; border-radius: 50%; flex-shrink: 0; }
+  .d-dot-green { background: var(--green); }
+  .d-dot-amber { background: var(--amber); }
+  .d-dot-live { background: var(--indigo); animation: livePulse 2s ease-in-out infinite; }
+  .detail-row .txt { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text2); }
+  .detail-row .ts { font-family: var(--mono); font-size: 10px; color: var(--mute); flex-shrink: 0; }
+  .commit-line { display: flex; align-items: baseline; gap: 6px; font-size: 11px; padding: 2px 0; }
+  .c-hash { font-family: var(--mono); font-size: 10px; color: var(--indigo); flex-shrink: 0; opacity: 0.7; }
+  .c-msg { color: var(--text2); flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .c-date { font-family: var(--mono); font-size: 10px; color: var(--mute); flex-shrink: 0; }
+  .pr-line { display: flex; align-items: center; gap: 6px; font-size: 11px; padding: 2px 0; }
+  .pr-icon {
+    width: 18px; height: 18px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 10px; flex-shrink: 0; font-weight: 600;
+  }
+  .pri-active { background: var(--blue-light); color: var(--blue); }
+  .pri-merged { background: var(--green-light); color: var(--green); }
+  .pri-rejected { background: var(--red-light); color: var(--red); }
+  .pr-line a { color: var(--blue); text-decoration: none; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .pr-line a:hover { text-decoration: underline; }
+  .votes { display: flex; gap: 2px; flex-shrink: 0; }
+  .vote {
+    width: 16px; height: 16px; border-radius: 50%; font-size: 9px;
+    display: flex; align-items: center; justify-content: center; font-weight: 700;
+  }
+  .v-yes { background: var(--green-light); color: var(--green); }
+  .v-no { background: var(--red-light); color: var(--red); }
+  .v-wait { background: var(--amber-light); color: var(--amber); }
+  .v-none { background: #f0ede8; color: var(--mute); }
+
+  /* ── Repo Commits Toggle ── */
+  .commits-toggle {
+    display: flex; align-items: center; gap: 6px; padding: 6px 16px;
+    cursor: pointer; user-select: none; border-top: 1px solid var(--border-light);
+    transition: background 0.1s;
+  }
+  .commits-toggle:hover { background: #faf9f7; }
+  .ct-arrow { font-size: 9px; color: var(--mute); }
+  .ct-label { font-size: 11px; font-weight: 500; color: var(--dim); }
+  .commits-section { padding: 4px 16px 8px; background: #faf9f7; border-top: 1px solid var(--border-light); }
+  .commit-group-label {
+    font-size: 11px; font-weight: 600; color: var(--text2);
+    padding: 6px 0 2px; margin-top: 2px;
+    border-top: 1px solid var(--border-light);
+  }
+  .commit-group-label:first-child { border-top: none; margin-top: 0; }
+
+  /* ── Unlinked stories ── */
+  .unlinked-header {
+    padding: 10px 16px; background: var(--bg); border-bottom: 1px solid var(--border-light);
+    font-size: 12px; font-weight: 600; color: var(--dim);
+  }
+
+  /* ── Daily Feed ── */
+  .daily-card {
+    background: var(--card); border: 1px solid var(--border-light); border-radius: 10px;
+    margin-top: 24px; overflow: hidden; box-shadow: var(--shadow);
+  }
+  .daily-header {
+    padding: 10px 16px; background: var(--bg); border-bottom: 1px solid var(--border-light);
+    font-size: 12px; font-weight: 600; color: var(--text2);
+  }
+  .day-group { border-bottom: 1px solid var(--border-light); }
+  .day-group:last-child { border-bottom: none; }
+  .day-date {
+    padding: 8px 16px 2px; font-family: var(--mono); font-size: 11px;
+    font-weight: 600; color: var(--text2);
+  }
+  .day-item {
+    display: flex; align-items: center; gap: 8px;
+    padding: 3px 16px; font-size: 11px; color: var(--text2);
+  }
+  .day-item:last-child { padding-bottom: 8px; }
+  .day-tag {
+    font-family: var(--mono); font-size: 8px; font-weight: 600;
+    padding: 1px 6px; border-radius: 3px; text-transform: uppercase;
+    letter-spacing: 0.3px; min-width: 44px; text-align: center; flex-shrink: 0;
+  }
+  .tag-commit { background: var(--blue-light); color: var(--blue); }
+  .tag-pr { background: var(--purple-light); color: var(--purple); }
+  .tag-exec { background: var(--green-light); color: var(--green); }
+  .tag-story { background: var(--amber-light); color: var(--amber); }
+  .tag-task { background: var(--cyan-light); color: var(--cyan); }
+  .day-text { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; }
+
+  /* ── Utilities ── */
+  .loading { display: flex; align-items: center; justify-content: center; padding: 32px; color: var(--dim); font-size: 12px; gap: 8px; }
+  .spinner { width: 14px; height: 14px; border: 2px solid var(--border); border-top-color: var(--indigo); border-radius: 50%; animation: spin 0.6s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg) } }
+  .empty { padding: 20px; text-align: center; color: var(--mute); font-size: 12px; }
+
+  /* ── Entrance ── */
+  .repo-card { animation: fadeIn 0.25s ease-out both; }
+  .repo-card:nth-child(2) { animation-delay: 40ms; }
+  .repo-card:nth-child(3) { animation-delay: 80ms; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="topbar-l">
+    <span class="brand">DevSprint</span>
+    <div class="sprint-info">
+      <span class="name" id="sprint-name"></span>
+      <span id="sprint-dates"></span>
+    </div>
+  </div>
+  <button class="btn-refresh" onclick="refreshAll()">Opdater</button>
+</div>
+
+<div class="shell">
+  <div class="agent-banner idle" id="agent-banner">
+    <div class="ab-main">
+      <div class="ab-pulse idle" id="ab-pulse"></div>
+      <span class="ab-label idle" id="ab-label">IDLE</span>
+      <span class="ab-story" id="ab-story" style="color:var(--dim)">Ingen aktiv agent</span>
+      <span class="ab-time" id="ab-time"></span>
+    </div>
+    <div id="ab-extra" style="display:none">
+      <div class="ab-detail">
+        <span class="ab-step" id="ab-step"></span>
+        <span class="ab-desc" id="ab-desc"></span>
+      </div>
+      <div class="ab-stories" id="ab-stories"></div>
+      <div class="ab-progress" id="ab-progress"></div>
+    </div>
+  </div>
+
+  <div class="stats">
+    <div class="stat"><div class="stat-label">Stories</div><div class="stat-val" id="s-stories" style="color:var(--indigo)">-</div></div>
+    <div class="stat"><div class="stat-label">Afsluttet</div><div class="stat-val" id="s-done" style="color:var(--green)">-</div></div>
+    <div class="stat"><div class="stat-label">Aktive PRs</div><div class="stat-val" id="s-prs" style="color:var(--blue)">-</div></div>
+    <div class="stat"><div class="stat-label">Repos</div><div class="stat-val" id="s-repos" style="color:var(--purple)">-</div></div>
+    <div class="stat"><div class="stat-label">Commits</div><div class="stat-val" id="s-commits" style="color:var(--cyan)">-</div></div>
+  </div>
+
+  <div id="main"><div class="loading"><div class="spinner"></div>Henter sprint...</div></div>
+
+  <div class="daily-card">
+    <div class="daily-header">Dagsoversigt</div>
+    <div id="daily"><div class="loading"><div class="spinner"></div></div></div>
+  </div>
+</div>
+
+<script>
+let S = { sprint:null, git:[], pr:[], map:null, exec:null, agent:null };
+
+const F = url => fetch(url).then(r => r.ok ? r.json() : Promise.reject(r.status));
+const E = s => s ? String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;') : '';
+const D = d => { if(!d)return''; const t=new Date(d); return t.toLocaleDateString('da-DK',{day:'numeric',month:'short'})+' '+t.toLocaleTimeString('da-DK',{hour:'2-digit',minute:'2-digit'}); };
+const AGO = d => { if(!d)return''; const s=Math.floor((Date.now()-new Date(d).getTime())/1000); if(s<60)return'nu'; if(s<3600)return Math.floor(s/60)+'m siden'; if(s<86400)return Math.floor(s/3600)+'t siden'; return Math.floor(s/86400)+'d siden'; };
+const SC = s => { if(!s)return'new'; const l=s.toLowerCase(); return l==='new'?'new':['resolved','closed','done'].includes(l)?'resolved':l==='removed'?'removed':'active'; };
+
+/* ── DOM Helper ── */
+function cel(tag, cls, txt) {
+  const e = document.createElement(tag);
+  if (cls) e.className = cls;
+  if (txt != null) e.textContent = String(txt);
+  return e;
+}
+
+/* ── Agent ── */
+const EXEC_STEPS=['Pre-flight','Analyze','Baseline','Branch','Activate','Write Tests','Implement','Test','Commit','PR','Resolve','Done'];
+const PLAN_STEPS=['Fetch','Load','Check','Resolve','Analyze','Verify','DevOps','Spec','Review','Post','Task Map','Done'];
+const execI = s => { if(!s)return 0; const l=s.toLowerCase(); if(/pre.?flight|checking.*state|loading.*spec/.test(l))return 1; if(/baseline|running.*base/.test(l))return 2; if(/branch/.test(l))return 3; if(/activat/.test(l))return 4; if(/writ.*test|red/.test(l))return 5; if(/impl|green|refac/.test(l))return 6; if(/full.*test|running.*test|test.*suite/.test(l))return 7; if(/commit|push/.test(l))return 8; if(/pr|pull/.test(l))return 9; if(/resolv|compl|done/.test(l))return 10; return 0; };
+const planI = s => { if(!s)return 0; const l=s.toLowerCase(); if(/fetch|planning/.test(l))return 0; if(/load|stories/.test(l))return 1; if(/check|existing/.test(l))return 2; if(/analy|scan/.test(l))return 4; if(/resolv|repo|detect/.test(l))return 3; if(/verif|understand/.test(l))return 5; if(/post.*devops|post.*comment|adding.*comment/.test(l))return 9; if(/devops|updat.*desc/.test(l))return 6; if(/spec|generat|story\.md/.test(l))return 7; if(/review|await|present/.test(l))return 8; if(/task.?map/.test(l))return 10; if(/done|complete|clear/.test(l))return 11; return 0; };
+const isPlanStep = s => { if(!s)return false; const l=s.toLowerCase(); return /planning|fetch.*sprint|load.*stories|check.*exist|resolv.*repo|analy.*repo|scan.*for|verif.*understand|updat.*desc|devops|generat.*spec|story\.md|review|await|present|post.*devops|post.*comment|adding.*comment|task.?map/.test(l); };
+const stepI = s => isPlanStep(s) ? planI(s) : execI(s);
+const getSteps = s => isPlanStep(s) ? PLAN_STEPS : EXEC_STEPS;
+
+function renderAgent(d) {
+  const banner = document.getElementById('agent-banner');
+  const pulse = document.getElementById('ab-pulse');
+  const label = document.getElementById('ab-label');
+  const story = document.getElementById('ab-story');
+  const time = document.getElementById('ab-time');
+  const extra = document.getElementById('ab-extra');
+  const step = document.getElementById('ab-step');
+  const desc = document.getElementById('ab-desc');
+  const prog = document.getElementById('ab-progress');
+
+  if (!d || !d.active) {
+    banner.className = 'agent-banner idle';
+    pulse.className = 'ab-pulse idle';
+    label.className = 'ab-label idle';
+    label.textContent = 'IDLE';
+    story.textContent = 'Ingen aktiv agent';
+    story.style.color = 'var(--dim)';
+    time.textContent = '';
+    extra.style.display = 'none';
+    return;
+  }
+
+  const a = d.active;
+  const stale = a.updatedAt && (Date.now() - new Date(a.updatedAt).getTime()) > 300000;
+
+  if (stale) {
+    banner.className = 'agent-banner idle';
+    pulse.className = 'ab-pulse idle';
+    label.className = 'ab-label idle';
+    label.textContent = 'STALE';
+    story.textContent = a.storyId ? `#${a.storyId} ${a.storyTitle}` : (a.step || '...');
+    story.style.color = 'var(--dim)';
+    time.textContent = a.updatedAt ? AGO(a.updatedAt) : '';
+    extra.style.display = 'none';
+    return;
+  }
+
+  banner.className = 'agent-banner';
+  pulse.className = 'ab-pulse';
+  label.className = 'ab-label';
+  label.textContent = 'AKTIV';
+  story.style.color = '';
+  if (a.storyId) {
+    story.innerHTML = `<span class="id">#${a.storyId}</span>${E(a.storyTitle)}`;
+  } else {
+    story.textContent = a.detail || a.step || '...';
+  }
+  time.textContent = a.startedAt ? AGO(a.startedAt) : '';
+  extra.style.display = '';
+  step.textContent = a.step || '';
+  desc.textContent = a.storyId ? (a.detail || '') : (a.detail && a.detail !== story.textContent ? a.detail : (a.repo || ''));
+
+  // Per-story rows
+  const storiesEl = document.getElementById('ab-stories');
+  const storyMap = a.stories || {};
+  const storyKeys = Object.keys(storyMap);
+  if (storyKeys.length > 1) {
+    // Multiple stories being tracked — show each as a row
+    storiesEl.innerHTML = '';
+    story.textContent = storyKeys.length + ' stories';
+    step.textContent = '';
+    desc.textContent = '';
+    storyKeys.forEach(k => {
+      const ss = storyMap[k];
+      const row = cel('div', 'ab-srow');
+      row.appendChild(cel('span', 'id', '#' + ss.storyId));
+      row.appendChild(cel('span', 'name', ss.storyTitle || ''));
+      row.appendChild(cel('span', 'ab-sstep', ss.step || ''));
+      row.appendChild(cel('span', 'ab-sdesc', ss.detail || ''));
+      storiesEl.appendChild(row);
+    });
+    storiesEl.style.display = '';
+  } else {
+    storiesEl.style.display = 'none';
+    storiesEl.innerHTML = '';
+  }
+
+  const steps = getSteps(a.step);
+  const ci = stepI(a.step);
+  prog.innerHTML = steps.map((_, i) => `<div class="ab-bar ${i < ci ? 'done' : i === ci ? 'now' : ''}"></div>`).join('');
+}
+
+/* ── DOM State ── */
+const _dom = { built: false, structKey: '', storyDoms: new Map(), dailyKey: '' };
+
+/* ── Weekday cutoff ── */
+function weekdayCutoff(n) {
+  const d = new Date(); d.setHours(0,0,0,0);
+  let count = 0;
+  while (count < n) { d.setDate(d.getDate() - 1); const day = d.getDay(); if (day !== 0 && day !== 6) count++; }
+  return d;
+}
+
+/* ── Toggle helpers ── */
+function togDetail(el) {
+  const d = el.nextElementSibling;
+  if (d && d.classList.contains('story-detail')) d.style.display = d.style.display === 'none' ? 'block' : 'none';
+}
+
+/* ── Save/restore toggle states across structural rebuilds ── */
+function saveToggles(container) {
+  const st = {};
+  container.querySelectorAll('[data-story-detail]').forEach(el => {
+    if (el.style.display !== 'none') st['d' + el.dataset.storyDetail] = 1;
+  });
+  container.querySelectorAll('.commits-section').forEach(el => {
+    if (el.style.display !== 'none') st['c' + el.id] = 1;
+  });
+  return st;
+}
+function restoreToggles(container, st) {
+  for (const k of Object.keys(st)) {
+    if (k[0] === 'd') {
+      const el = container.querySelector('[data-story-detail="' + k.slice(1) + '"]');
+      if (el) el.style.display = 'block';
+    } else if (k[0] === 'c') {
+      const el = container.querySelector('#' + k.slice(1));
+      if (el) { el.style.display = ''; const t = el.previousElementSibling; if (t) { const a = t.querySelector('.ct-arrow'); if (a) a.textContent = '\u25BC'; } }
+    }
+  }
+}
+
+/* ── Fill story indicator badges ── */
+function fillIndicators(el, s, ctx) {
+  while (el.firstChild) el.removeChild(el.firstChild);
+  const { exM, prM, ag, plannedIds } = ctx;
+  const live = ag && ag.active && ag.active.storyId === s.id;
+  const ex = exM[s.id], pr = prM[s.id], planned = plannedIds.has(s.id);
+  if (live) el.appendChild(cel('span', 'ind ind-live', 'Live'));
+  if (planned && !ex) el.appendChild(cel('span', 'ind ind-planned', 'Planned'));
+  if (pr) {
+    if (pr.prStatus === 'completed') el.appendChild(cel('span', 'ind ind-pr-merged', 'PR merged'));
+    else if (pr.prStatus === 'abandoned') el.appendChild(cel('span', 'ind ind-pr-rejected', 'PR lukket'));
+    else el.appendChild(cel('span', 'ind ind-pr-active', 'PR aktiv'));
+  }
+  if (ex && !pr) {
+    el.appendChild(cel('span', ex.status === 'completed' ? 'ind ind-done' : 'ind ind-partial', ex.status === 'completed' ? 'F\u00e6rdig' : 'Delvis'));
+  }
+}
+
+/* ── Build a story row + detail panel (DOM, no innerHTML) ── */
+function buildStoryRow(s, ctx) {
+  const { exM, prM, ag } = ctx;
+  const ex = exM[s.id], pr = prM[s.id];
+  const live = ag && ag.active && ag.active.storyId === s.id;
+  const hasDetail = !!(ex || pr || live);
+
+  const row = cel('div', 'story-row');
+  row.dataset.storyId = s.id;
+  if (hasDetail) row.onclick = function() { togDetail(this); };
+
+  row.appendChild(cel('span', 's-id', '#' + s.id));
+  row.appendChild(cel('span', 's-title', s.title));
+
+  const inds = cel('span', 's-indicators');
+  inds.dataset.storyIndicators = s.id;
+  fillIndicators(inds, s, ctx);
+  row.appendChild(inds);
+
+  const sc = SC(s.state);
+  const stCls = s.state.toLowerCase() === 'closed' ? 'st-closed' : 'st-' + sc;
+  const stateEl = cel('span', 's-state ' + stCls, s.state);
+  row.appendChild(stateEl);
+
+  // Detail panel
+  const detail = cel('div', 'story-detail');
+  detail.dataset.storyDetail = s.id;
+  detail.style.display = 'none';
+
+  // Agent sub-section (always present, shown/hidden by updateStoryAgent)
+  const agSec = cel('div', 'detail-sec agent-detail');
+  agSec.dataset.storyAgent = s.id;
+  agSec.style.display = 'none';
+  agSec.appendChild(cel('div', 'detail-label', 'Agent'));
+  const agRow = cel('div', 'detail-row');
+  agRow.appendChild(cel('span', 'd-dot d-dot-live'));
+  agRow.appendChild(cel('span', 'txt agent-txt'));
+  agRow.appendChild(cel('span', 'ts agent-ts'));
+  agSec.appendChild(agRow);
+  detail.appendChild(agSec);
+
+  if (ex) {
+    const sec = cel('div', 'detail-sec');
+    sec.appendChild(cel('div', 'detail-label', 'Execution'));
+    const r = cel('div', 'detail-row');
+    r.appendChild(cel('span', 'd-dot d-dot-' + (ex.status === 'completed' ? 'green' : 'amber')));
+    r.appendChild(cel('span', 'txt', ex.branch || ''));
+    r.appendChild(cel('span', 'ts', D(ex.completedAt)));
+    sec.appendChild(r);
+    if (ex.testsPassed !== undefined) {
+      const tr = cel('div', 'detail-row');
+      tr.appendChild(cel('span', 'd-dot d-dot-green'));
+      const tt = cel('span', 'txt', ex.testsPassed + ' ok' + (ex.testsFailed ? ', ' + ex.testsFailed + ' fejl' : ''));
+      tt.style.color = 'var(--green)';
+      tr.appendChild(tt);
+      sec.appendChild(tr);
+    }
+    detail.appendChild(sec);
+  }
+
+  if (pr) {
+    const ps = pr.prStatus === 'completed' ? 'merged' : pr.prStatus === 'abandoned' ? 'rejected' : 'active';
+    const ic = ps === 'merged' ? '\u2713' : ps === 'rejected' ? '\u2717' : '\u21BA';
+    const sec = cel('div', 'detail-sec');
+    sec.appendChild(cel('div', 'detail-label', 'Pull Request'));
+    const pl = cel('div', 'pr-line');
+    pl.appendChild(cel('span', 'pr-icon pri-' + ps, ic));
+    const a = document.createElement('a');
+    a.href = pr.prUrl || '#'; a.target = '_blank';
+    a.textContent = pr.prTitle || 'PR #' + pr.prId;
+    pl.appendChild(a);
+    if (pr.reviewers && pr.reviewers.length) {
+      const vs = cel('span', 'votes');
+      for (const rv of pr.reviewers) {
+        let c = 'v-none', ch = '\u2013';
+        if (rv.vote === 10) { c = 'v-yes'; ch = '\u2713'; }
+        else if (rv.vote === 5) { c = 'v-yes'; ch = '~'; }
+        else if (rv.vote === -10) { c = 'v-no'; ch = '\u2717'; }
+        else if (rv.vote === -5) { c = 'v-wait'; ch = '?'; }
+        const v = cel('span', 'vote ' + c, ch);
+        v.title = rv.name || '';
+        vs.appendChild(v);
+      }
+      pl.appendChild(vs);
+    }
+    sec.appendChild(pl);
+    detail.appendChild(sec);
+  }
+
+  return { row, detail, inds, stateEl };
+}
+
+/* ── Update existing story row DOM (fast path) ── */
+function updateStoryDom(sd, s, ctx) {
+  const sc = SC(s.state);
+  const stCls = s.state.toLowerCase() === 'closed' ? 'st-closed' : 'st-' + sc;
+  sd.stateEl.className = 's-state ' + stCls;
+  sd.stateEl.textContent = s.state;
+  fillIndicators(sd.inds, s, ctx);
+  const { exM, prM, ag } = ctx;
+  if ((exM[s.id] || prM[s.id] || (ag && ag.active && ag.active.storyId === s.id)) && !sd.row.onclick) {
+    sd.row.onclick = function() { togDetail(this); };
+  }
+}
+
+/* ── Build commits section (DOM, no innerHTML) ── */
+function buildCommits(git, repoStories, repoId, cutoff) {
+  const frag = document.createDocumentFragment();
+  const all = (git.commits || []).filter(c => c.subject && !c.subject.startsWith('Merge ') && !c.subject.startsWith('WIP on ') && !c.subject.startsWith('index on ') && !c.subject.startsWith('untracked files on ') && new Date(c.date) >= cutoff);
+  if (!all.length) return frag;
+
+  const grouped = {}, unlinked = [];
+  for (const c of all) {
+    let m = false;
+    for (const s of repoStories) { if (c.subject.includes('#' + s.id)) { (grouped[s.id] = grouped[s.id] || { story: s, commits: [] }).commits.push(c); m = true; break; } }
+    if (!m) unlinked.push(c);
+  }
+
+  function addSection(labelText, labelStyle, sectionId, commitList, groupData) {
+    const toggle = cel('div', 'commits-toggle');
+    const arrow = cel('span', 'ct-arrow', '\u25B6');
+    const label = cel('span', 'ct-label', labelText);
+    if (labelStyle) label.style.color = labelStyle;
+    toggle.appendChild(arrow); toggle.appendChild(label);
+    const section = cel('div', 'commits-section');
+    section.id = sectionId; section.style.display = 'none';
+    toggle.onclick = function() {
+      const show = section.style.display === 'none';
+      section.style.display = show ? '' : 'none';
+      arrow.textContent = show ? '\u25BC' : '\u25B6';
+    };
+    if (groupData) {
+      for (const id of Object.keys(groupData)) {
+        const g = groupData[id];
+        section.appendChild(cel('div', 'commit-group-label', '#' + g.story.id + ' ' + g.story.title));
+        for (const c of g.commits) {
+          const ln = cel('div', 'commit-line');
+          ln.appendChild(cel('span', 'c-hash', c.hash ? c.hash.substring(0, 7) : ''));
+          ln.appendChild(cel('span', 'c-msg', c.subject));
+          ln.appendChild(cel('span', 'c-date', D(c.date)));
+          section.appendChild(ln);
+        }
+      }
+    } else {
+      for (const c of commitList) {
+        const ln = cel('div', 'commit-line');
+        ln.appendChild(cel('span', 'c-hash', c.hash ? c.hash.substring(0, 7) : ''));
+        ln.appendChild(cel('span', 'c-msg', c.subject));
+        ln.appendChild(cel('span', 'c-date', D(c.date)));
+        section.appendChild(ln);
+      }
+    }
+    frag.appendChild(toggle); frag.appendChild(section);
+  }
+
+  const linked = Object.keys(grouped);
+  if (linked.length) {
+    const cnt = linked.reduce((n, id) => n + grouped[id].commits.length, 0);
+    addSection('Commits (' + cnt + ')', null, 'commits-' + repoId, null, grouped);
+  }
+  if (unlinked.length) addSection('Andre commits (' + unlinked.length + ')', 'var(--mute)', 'other-' + repoId, unlinked, null);
+  return frag;
+}
+
+/* ── Build entire main board DOM ── */
+function buildMainDOM(mainEl, rA, rC, ulA, ulC, ctx) {
+  const { gitM } = ctx;
+  while (mainEl.firstChild) mainEl.removeChild(mainEl.firstChild);
+  _dom.storyDoms.clear();
+
+  // Merge all repos — active and completed in the same card
+  const allRepos = new Set([...Object.keys(rA), ...Object.keys(rC)]);
+
+  for (const rn of allRepos) {
+    const active = rA[rn] || [];
+    const completed = rC[rn] || [];
+    const git = gitM[rn] || {};
+    const card = cel('div', 'repo-card');
+
+    const header = cel('div', 'repo-header');
+    header.appendChild(cel('span', 'repo-icon', '\uD83D\uDCC1'));
+    header.appendChild(cel('span', 'repo-name', rn));
+    const badges = cel('div', 'repo-badges');
+    const total = active.length + completed.length;
+    badges.appendChild(cel('span', 'badge badge-count', total + (total === 1 ? ' story' : ' stories')));
+    if (git.hasChanges) badges.appendChild(cel('span', 'badge badge-dirty', 'uncommitted'));
+    header.appendChild(badges);
+    card.appendChild(header);
+
+    const body = cel('div', 'repo-body');
+
+    // Active stories
+    for (const s of active) {
+      const sd = buildStoryRow(s, ctx);
+      body.appendChild(sd.row); body.appendChild(sd.detail);
+      _dom.storyDoms.set(s.id, sd);
+    }
+
+    // Completed stories — collapsed toggle inside the same card
+    if (completed.length) {
+      const compId = 'done-' + rn.replace(/[^a-zA-Z0-9]/g, '');
+      const toggle = cel('div', 'commits-toggle');
+      const arrow = cel('span', 'ct-arrow', '\u25B6');
+      const label = cel('span', 'ct-label', 'Afsluttede (' + completed.length + ')');
+      label.style.color = 'var(--green)';
+      toggle.appendChild(arrow); toggle.appendChild(label);
+      const section = cel('div', 'commits-section');
+      section.id = compId; section.style.display = 'none';
+      toggle.onclick = function() {
+        const show = section.style.display === 'none';
+        section.style.display = show ? '' : 'none';
+        arrow.textContent = show ? '\u25BC' : '\u25B6';
+      };
+      for (const s of completed) {
+        const sd = buildStoryRow(s, ctx);
+        sd.row.style.opacity = '0.55';
+        section.appendChild(sd.row); section.appendChild(sd.detail);
+        _dom.storyDoms.set(s.id, sd);
+      }
+      body.appendChild(toggle); body.appendChild(section);
+    }
+
+    // Commits
+    const allRepoStories = [...active, ...completed];
+    body.appendChild(buildCommits(git, allRepoStories, rn.replace(/[^a-zA-Z0-9]/g, ''), ctx.commitCutoff));
+    card.appendChild(body);
+    mainEl.appendChild(card);
+  }
+
+  // Unlinked stories (active + completed collapsed)
+  if (ulA.length || ulC.length) {
+    const card = cel('div', 'repo-card');
+    const total = ulA.length + ulC.length;
+    card.appendChild(cel('div', 'unlinked-header', 'Uden repo-tilknytning (' + total + ')'));
+    const body = document.createElement('div');
+    for (const s of ulA) {
+      const row = cel('div', 'story-row');
+      row.appendChild(cel('span', 's-id', '#' + s.id));
+      row.appendChild(cel('span', 's-title', s.title));
+      row.appendChild(cel('span', 's-state st-' + SC(s.state), s.state));
+      body.appendChild(row);
+    }
+    if (ulC.length) {
+      const toggle = cel('div', 'commits-toggle');
+      const arrow = cel('span', 'ct-arrow', '\u25B6');
+      const label = cel('span', 'ct-label', 'Afsluttede (' + ulC.length + ')');
+      label.style.color = 'var(--green)';
+      toggle.appendChild(arrow); toggle.appendChild(label);
+      const section = cel('div', 'commits-section');
+      section.id = 'done-unlinked'; section.style.display = 'none';
+      toggle.onclick = function() {
+        const show = section.style.display === 'none';
+        section.style.display = show ? '' : 'none';
+        arrow.textContent = show ? '\u25BC' : '\u25B6';
+      };
+      for (const s of ulC) {
+        const row = cel('div', 'story-row'); row.style.opacity = '0.55';
+        row.appendChild(cel('span', 's-id', '#' + s.id));
+        row.appendChild(cel('span', 's-title', s.title));
+        row.appendChild(cel('span', 's-state st-resolved', s.state));
+        section.appendChild(row);
+      }
+      body.appendChild(toggle); body.appendChild(section);
+    }
+    card.appendChild(body);
+    mainEl.appendChild(card);
+  }
+}
+
+/* ── Main Board ── */
+function renderMain() {
+  const mainEl = document.getElementById('main');
+  if (!S.sprint || !S.sprint.items) {
+    if (!_dom.built) mainEl.textContent = 'Venter p\u00e5 data\u2026';
+    return;
+  }
+  const sp = S.sprint;
+
+  if (sp.sprint) {
+    document.getElementById('sprint-name').textContent = sp.sprint.name || '';
+    if (sp.sprint.startDate && sp.sprint.finishDate) {
+      const a = new Date(sp.sprint.startDate).toLocaleDateString('da-DK', {day:'numeric', month:'short'});
+      const b = new Date(sp.sprint.finishDate).toLocaleDateString('da-DK', {day:'numeric', month:'short'});
+      document.getElementById('sprint-dates').textContent = a + ' \u2013 ' + b;
+    }
+  }
+
+  const stories = sp.items.filter(i => i.type === 'User Story' || i.type === 'Bug');
+  const exM = {}; if (S.exec && S.exec.executions) for (const x of S.exec.executions) exM[x.storyId] = x;
+  const prM = {}; for (const p of S.pr) prM[p.storyId] = p;
+  const gitM = {}; for (const r of S.git) gitM[r.repoName] = r;
+  const sRM = {}; if (S.map && S.map.mappings) for (const m of S.map.mappings) if (m.repoPath) sRM[m.storyId] = m.repoPath.replace(/\\/g, '/').split('/').pop();
+
+  const isDone = s => ['resolved', 'closed', 'done'].includes((s.state || '').toLowerCase());
+  const rA = {}, rC = {}, unl = [];
+  for (const s of stories) { const r = sRM[s.id]; if (r) { const b = isDone(s) ? rC : rA; (b[r] = b[r] || []).push(s); } else unl.push(s); }
+  const allR = new Set([...Object.keys(rA), ...Object.keys(rC)]);
+
+  document.getElementById('s-stories').textContent = stories.length;
+  document.getElementById('s-done').textContent = stories.filter(isDone).length;
+  document.getElementById('s-prs').textContent = S.pr.filter(p => p.prStatus === 'active').length;
+  document.getElementById('s-repos').textContent = allR.size;
+  document.getElementById('s-commits').textContent = S.git.reduce((n, r) => n + (r.commits ? r.commits.length : 0), 0);
+
+  const ag = S.agent;
+  const plannedIds = new Set();
+  if (S.map && S.map.mappings) for (const m of S.map.mappings) if (m.taskIds && m.taskIds.length > 0) plannedIds.add(m.storyId);
+
+  const ctx = { exM, prM, gitM, ag, plannedIds, commitCutoff: weekdayCutoff(3), isDone };
+  const ulA = unl.filter(s => !isDone(s));
+  const ulC = unl.filter(isDone);
+
+  // Structure key: which repos have which stories
+  const structKey = JSON.stringify([
+    Object.entries(rA).map(([r,sl]) => [r, sl.map(s=>s.id)]),
+    ulA.map(s=>s.id),
+    Object.entries(rC).map(([r,sl]) => [r, sl.map(s=>s.id)]),
+    ulC.map(s=>s.id)
+  ]);
+
+  if (!_dom.built || structKey !== _dom.structKey) {
+    // Structural change: rebuild DOM (save/restore toggle states)
+    const toggles = _dom.built ? saveToggles(mainEl) : {};
+    buildMainDOM(mainEl, rA, rC, ulA, ulC, ctx);
+    if (Object.keys(toggles).length) restoreToggles(mainEl, toggles);
+    _dom.built = true;
+    _dom.structKey = structKey;
+    return;
+  }
+
+  // Fast path: only update states + badges (no DOM rebuild)
+  for (const s of stories) {
+    const sd = _dom.storyDoms.get(s.id);
+    if (sd) updateStoryDom(sd, s, ctx);
+  }
+}
+
+/* ── Story-level agent updates (5s poll, DOM only) ── */
+function updateStoryAgent(d) {
+  const a = d && d.active;
+  const storyMap = a && a.stories ? a.stories : {};
+  const activeIds = new Set(Object.keys(storyMap).map(Number));
+  // Fallback: if no stories map but single storyId, use that
+  if (activeIds.size === 0 && a && a.storyId) activeIds.add(a.storyId);
+
+  document.querySelectorAll('[data-story-indicators]').forEach(el => {
+    const sid = parseInt(el.dataset.storyIndicators);
+    const existing = el.querySelector('.ind-live');
+    const isLive = activeIds.has(sid);
+    if (isLive && !existing) {
+      const badge = cel('span', 'ind ind-live', 'Live');
+      el.prepend(badge);
+      const row = el.closest('.story-row');
+      if (row && !row.onclick) row.setAttribute('onclick', 'togDetail(this)');
+    } else if (!isLive && existing) {
+      existing.remove();
+    }
+  });
+  // Pulse animation on live story rows
+  document.querySelectorAll('.story-row').forEach(row => {
+    const idEl = row.querySelector('.s-id');
+    if (!idEl) return;
+    const sid = parseInt(idEl.textContent.replace('#', ''));
+    if (activeIds.has(sid)) {
+      row.classList.add('story-live');
+    } else {
+      row.classList.remove('story-live');
+    }
+  });
+  document.querySelectorAll('[data-story-agent]').forEach(el => {
+    const sid = parseInt(el.dataset.storyAgent);
+    const ss = storyMap[String(sid)];
+    if (ss) {
+      el.style.display = '';
+      el.querySelector('.agent-txt').textContent = (ss.step || '') + (ss.detail ? ' \u2014 ' + ss.detail : '');
+      el.querySelector('.agent-ts').textContent = AGO(ss.updatedAt);
+    } else if (a && a.storyId === sid) {
+      el.style.display = '';
+      el.querySelector('.agent-txt').textContent = (a.step || '') + (a.detail ? ' \u2014 ' + a.detail : '');
+      el.querySelector('.agent-ts').textContent = AGO(a.updatedAt);
+    } else {
+      el.style.display = 'none';
+    }
+  });
+}
+
+/* ── Daily Feed (DOM-based) ── */
+function buildDailyDOM(el, days) {
+  while (el.firstChild) el.removeChild(el.firstChild);
+  if (!Object.keys(days).length) {
+    el.appendChild(cel('div', 'empty', 'Ingen aktivitet endnu'));
+    return;
+  }
+  for (const [day, items] of Object.entries(days)) {
+    const group = cel('div', 'day-group');
+    group.appendChild(cel('div', 'day-date', day));
+    const show = items.slice(0, 12);
+    for (const i of show) {
+      const row = cel('div', 'day-item');
+      row.appendChild(cel('span', 'day-tag tag-' + i.type, i.type));
+      row.appendChild(cel('span', 'day-text', i.text));
+      group.appendChild(row);
+    }
+    if (items.length > 12) {
+      const row = cel('div', 'day-item');
+      row.style.opacity = '0.4';
+      row.appendChild(cel('span', 'day-tag tag-task', '+' + (items.length - 12)));
+      row.appendChild(cel('span', 'day-text', 'mere'));
+      group.appendChild(row);
+    }
+    el.appendChild(group);
+  }
+}
+
+function renderDaily() {
+  const el = document.getElementById('daily'), entries = [];
+
+  if (S.sprint && S.sprint.items) for (const i of S.sprint.items) {
+    const d = i.changedDate || i.createdDate;
+    if (d) entries.push({ date: d, type: i.type === 'Task' ? 'task' : 'story', text: '#' + i.id + ' ' + i.title + ' \u2014 ' + i.state });
+  }
+  for (const r of (S.git || [])) for (const c of (r.commits || [])) entries.push({ date: c.date, type: 'commit', text: r.repoName + ': ' + c.subject });
+  if (S.exec && S.exec.executions) for (const x of S.exec.executions) {
+    entries.push({ date: x.completedAt, type: 'exec', text: '#' + x.storyId + ' ' + x.storyTitle + ' \u2014 ' + x.status });
+    if (x.prUrl) entries.push({ date: x.completedAt, type: 'pr', text: 'PR: ' + x.storyTitle });
+  }
+
+  entries.sort((a, b) => new Date(b.date) - new Date(a.date));
+  const days = {};
+  for (const e of entries) { const d = new Date(e.date).toLocaleDateString('da-DK', { weekday: 'long', day: 'numeric', month: 'short' }); (days[d] = days[d] || []).push(e); }
+
+  const key = JSON.stringify(days);
+  if (key !== _dom.dailyKey) {
+    _dom.dailyKey = key;
+    buildDailyDOM(el, days);
+  }
+}
+
+/* ── Data Loading ── */
+let _lastDataKey = '';
+async function refreshAll() {
+  await Promise.all([
+    F('/api/sprint').then(d => S.sprint = d).catch(() => {}),
+    F('/api/pr-status').then(d => S.pr = d).catch(() => S.pr = []),
+    F('/api/git-activity').then(d => S.git = d).catch(() => S.git = []),
+    F('/api/execution-log').then(d => S.exec = d).catch(() => {}),
+    F('/api/task-map').then(d => S.map = d).catch(() => {}),
+    F('/api/agent-status').then(d => { S.agent = d; renderAgent(d); }).catch(() => renderAgent(null)),
+  ]);
+  const key = JSON.stringify([S.sprint, S.pr, S.git, S.exec, S.map]);
+  if (key !== _lastDataKey) { _lastDataKey = key; renderMain(); renderDaily(); }
+}
+
+refreshAll();
+setInterval(() => F('/api/agent-status').then(d => { S.agent = d; renderAgent(d); updateStoryAgent(d); }).catch(() => renderAgent(null)), 5000);
+setInterval(refreshAll, 60000);
+</script>
+</body>
+</html>
