@@ -23,70 +23,69 @@ Zero external dependencies. Just Node.js built-ins and the Azure DevOps REST API
 ```
 > /devsprint-sprint
 
-━━━ Sprint: Sprint 39 - 2026 ━━━
+━━━ Sprint: Sprint 12 ━━━
 Dates:     2026-03-02 → 2026-03-13
-Items:     12
+Items:     8
 
-┌─ [US] #42876 — Brugerønsker
-│  State: ACTIVE  │  Assigned: Jane Smith
+┌─ [US] #1201 — Add price area column to customer list
+│  State: ACTIVE  │  Assigned: Alex Chen
 │
-│   ■ #42912 — Download forbrug fra forbrugssektionen        [DONE]
-│   ■ #42913 — Check "Åbn Xellent" for inaktive kunder      [DONE]
-│   ■ #42914 — Vis fakturatype i fakturasektionen            [DONE]
-│   ■ #42915 — Vis betalingsstatus i fakturasektionen        [NEW]
+│   ■ #1202 — Backend: Add price area field to API response  [DONE]
+│   ■ #1203 — Frontend: Display price area in customer table [NEW]
+│   ■ #1204 — Tests: Price area resolution logic             [NEW]
 └──────
 
-┌─ [US] #42920 — CSV-eksport af kundedata
-│  State: NEW  │  Assigned: Jane Smith
+┌─ [US] #1205 — CSV export of customer data
+│  State: NEW  │  Assigned: Alex Chen
 │
-│   ■ #42922 — Backend: CSV endpoint                         [NEW]
-│   ■ #42923 — Frontend: Download-knap                       [NEW]
-│   ■ #42924 — Tests for CSV-logik                           [NEW]
+│   ■ #1206 — Backend: CSV endpoint                          [NEW]
+│   ■ #1207 — Frontend: Download button                      [NEW]
+│   ■ #1208 — Tests: CSV generation                          [NEW]
 └──────
 ```
 
 ### Create stories from natural language
 
 ```
-> /devsprint-create Implementer CSV-eksport: 1) Backend endpoint 2) Frontend knap 3) Tests
+> /devsprint-create Add CSV export: 1) Backend endpoint 2) Frontend button 3) Tests
 
 Creating:
-  [User Story] "Implementer CSV-eksport"
-    [Task] "Backend: Opret CSV endpoint"
-    [Task] "Frontend: Tilføj download-knap"
-    [Task] "Tests: Skriv tests for CSV-logik"
+  [User Story] "Add CSV export of customer data"
+    [Task] "Backend: Create CSV endpoint"
+    [Task] "Frontend: Add download button"
+    [Task] "Tests: CSV generation and download"
 
 ╔══════════════════════════════════════════╗
-║  Story #42950 oprettet                   ║
+║  Story #1205 created                     ║
 ╚══════════════════════════════════════════╝
 
-  ✓ #42950 [User Story] "Implementer CSV-eksport"
-    ✓ #42951 [Task] "Backend: Opret CSV endpoint"
-    ✓ #42952 [Task] "Frontend: Tilføj download-knap"
-    ✓ #42953 [Task] "Tests: Skriv tests for CSV-logik"
+  ✓ #1205 [User Story] "Add CSV export of customer data"
+    ✓ #1206 [Task] "Backend: Create CSV endpoint"
+    ✓ #1207 [Task] "Frontend: Add download button"
+    ✓ #1208 [Task] "Tests: CSV generation and download"
 
-Sprint: Sprint 39 - 2026
+Sprint: Sprint 12
 
-Next step: /devsprint-plan 42950 to analyze and create spec.
+Next step: /devsprint-plan 1205 to analyze and create spec.
 ```
 
 ### Plan a story — analyze repo, generate spec
 
 ```
-> /devsprint-plan 42920
+> /devsprint-plan 1205
 
-=== Analysis: Sprint 39 - 2026 ===
+=== Analysis: Sprint 12 ===
 
-#42920 → CustomerPortal (from task map)
+#1205 → ContosoCRM (from task map)
 
-### #42920 — CSV-eksport af kundedata (New)
+### #1205 — CSV export of customer data (New)
 
 My understanding:
-  Export customer data as CSV from the Bifrost portal. Backend endpoint
+  Export customer data as CSV from the web portal. Backend endpoint
   returns CSV with configurable columns, frontend adds download button.
 
 Work type: Code change
-Target repo: CustomerPortal
+Target repo: ContosoCRM
 
 Repo analysis:
   Tech stack: C# / .NET 8 + React 18 / TypeScript
@@ -96,12 +95,12 @@ Repo analysis:
     src/Web/components/CustomerList.tsx — customer table component
   Code flow: CustomerController → CustomerService → CustomerRepository
 
-STORY.md written to CustomerPortal/.planning/stories/42920.md
+STORY.md written to ContosoCRM/.planning/stories/1205.md
 
-Ændringer?
+Changes?
 > ok
 
-Planning complete. Run /devsprint-execute 42920 to implement.
+Planning complete. Run /devsprint-execute 1205 to implement.
 ```
 
 ### Execute — autonomous implementation
@@ -114,43 +113,40 @@ Planning complete. Run /devsprint-execute 42920 to implement.
 ╚══════════════════════════════════════════════════════╝
 
 Already completed:
-  ✓ #42876 — Brugerønsker
+  ✓ #1201 — Add price area column to customer list
     Executed: 2026-03-07 | PR: https://dev.azure.com/.../pullrequest/891
 
-Skipping:
-  ⊘ #42907 — BLOKERET: Hjerting Vand - Migrering
-
 Will execute:
-  → #42920 — CSV-eksport af kundedata
-    State: New | Tasks: 0/3 done | Repo: CustomerPortal
+  → #1205 — CSV export of customer data
+    State: New | Tasks: 0/3 done | Repo: ContosoCRM
 
-Summary: 1 to execute, 1 already done, 1 skipped
+Summary: 1 to execute, 1 already done
 
-━━━ [1/1] Story #42920 — CSV-eksport af kundedata ━━━
+━━━ [1/1] Story #1205 — CSV export of customer data ━━━
 
   Baseline tests green — proceeding.
-  Created branch feature/42920-csv-eksport from develop
+  Created branch feature/1205-csv-export from develop
 
   Task status updates:
-    #42922 (Backend: CSV endpoint): Active ✓
-    #42923 (Frontend: Download-knap): Active ✓
-    #42924 (Tests for CSV-logik): Active ✓
+    #1206 (Backend: CSV endpoint): Active ✓
+    #1207 (Frontend: Download button): Active ✓
+    #1208 (Tests: CSV generation): Active ✓
 
   ... implementing ...
 
   Task resolution:
-    #42922 (Backend: CSV endpoint): Resolved ✓
-    #42923 (Frontend: Download-knap): Resolved ✓
-    #42924 (Tests for CSV-logik): Resolved ✓
+    #1206 (Backend: CSV endpoint): Resolved ✓
+    #1207 (Frontend: Download button): Resolved ✓
+    #1208 (Tests: CSV generation): Resolved ✓
 
-  Story #42920 resolved ✓
+  Story #1205 resolved ✓
 
 ╔══════════════════════════════════════════╗
 ║           Execution Complete             ║
 ╚══════════════════════════════════════════╝
 
-  ✓ #42920 — CSV-eksport af kundedata
-     Branch: feature/42920-csv-eksport
+  ✓ #1205 — CSV export of customer data
+     Branch: feature/1205-csv-export
      Tasks: 3/3 resolved
      Tests: 14 passed, 0 failed (dotnet test) — all passed
      Story: Resolved ✓
