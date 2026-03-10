@@ -2352,30 +2352,6 @@ async function cmdCreatePr(cwd, args) {
       const prId = prData.pullRequestId;
       const webUrl = `${cfg.org}/${cfg.project}/_git/${encodeURIComponent(repoName)}/pullRequest/${prId}`;
 
-      // Set auto-complete: when PR is merged, transition linked work items to Closed
-      try {
-        const createdById = prData.createdBy && prData.createdBy.id;
-        if (createdById) {
-          const acBody = {
-            autoCompleteSetBy: { id: createdById },
-            completionOptions: {
-              deleteSourceBranch: true,
-              transitionWorkItems: true,
-              mergeStrategy: 'squash',
-            },
-          };
-          const acUrl = `${cfg.org}/${cfg.project}/_apis/git/repositories/${encodeURIComponent(repoName)}/pullrequests/${prId}?api-version=7.1`;
-          const acRes = await makeRequest(acUrl, encodedPat, 'PATCH', acBody);
-          if (acRes.status === 200) {
-            console.error(`Auto-complete enabled: work items transition on merge`);
-          } else {
-            console.error(`Warning: could not enable auto-complete (HTTP ${acRes.status})`);
-          }
-        }
-      } catch (e) {
-        console.error(`Warning: auto-complete setup failed: ${e.message}`);
-      }
-
       console.log(JSON.stringify({
         pr: webUrl,
         prId,

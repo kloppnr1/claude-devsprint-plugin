@@ -1183,6 +1183,18 @@ function buildStoryRow(s, ctx) {
     };
     titleCell.appendChild(planBtn);
   }
+  if (cls === 'review') {
+    const closeBtn = cel('button', 'btn-exec', 'Godkend');
+    closeBtn.style.background = 'var(--green)';
+    closeBtn.onclick = function(e) {
+      e.stopPropagation();
+      closeBtn.disabled = true; closeBtn.textContent = '...';
+      F('/api/close-story', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ storyId: s.id }) })
+        .then(function() { refreshAll(); })
+        .catch(function(err) { closeBtn.textContent = 'Fejl'; setTimeout(function() { closeBtn.disabled = false; closeBtn.textContent = 'Godkend'; }, 2000); });
+    };
+    titleCell.appendChild(closeBtn);
+  }
   if (cls === 'planned' || cls === 'partial') {
     const reBtn = cel('button', 'btn-plan', 'Re-analys\u00e9r');
     reBtn.style.right = '108px';

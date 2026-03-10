@@ -474,6 +474,24 @@ async function handleRequest(req, res) {
             res.writeHead(405); res.end(JSON.stringify({ error: 'POST only' })); return;
           }
           break;
+        case '/api/close-story':
+          if (req.method === 'POST') {
+            let body = '';
+            req.on('data', c => body += c);
+            await new Promise(r => req.on('end', r));
+            const { storyId: closeId } = JSON.parse(body);
+            if (!closeId) { res.writeHead(400); res.end(JSON.stringify({ error: 'storyId required' })); return; }
+            const { execSync } = require('child_process');
+            try {
+              const out = execSync(`node "${path.join(process.env.HOME || process.env.USERPROFILE, '.claude', 'bin', 'devsprint-tools.cjs')}" update-state --id ${closeId} --state Closed --cwd "${CWD}"`, { encoding: 'utf-8' });
+              data = JSON.parse(out);
+            } catch (e) {
+              res.writeHead(500); res.end(JSON.stringify({ error: e.stderr || e.message })); return;
+            }
+          } else {
+            res.writeHead(405); res.end(JSON.stringify({ error: 'POST only' })); return;
+          }
+          break;
         case '/api/summary':
           const [sprint, gitActivity, prStatus] = await Promise.all([
             fetchSprintData().catch(() => null),
