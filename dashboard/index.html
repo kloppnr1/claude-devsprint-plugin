@@ -285,6 +285,7 @@
   }
   .hist-type.ht-plan { background: #0e7490; color: #fff; }
   .hist-type.ht-exec { background: #6d28d9; color: #fff; }
+  .hist-type.ht-prfix { background: var(--blue); color: #fff; }
   .hist-ts {
     font-family: var(--mono); font-size: 10px; color: var(--dim); font-weight: 500;
     font-variant-numeric: tabular-nums; white-space: nowrap; flex-shrink: 0;
@@ -675,6 +676,7 @@ const PLAN_STEPS=['Fetch','Load','Check','Resolve','Analyze','Verify','DevOps','
 const execI = s => { if(!s)return 0; const l=s.toLowerCase(); if(/pre.?flight|checking.*state|loading.*spec/.test(l))return 1; if(/baseline|running.*base/.test(l))return 2; if(/branch/.test(l))return 3; if(/activat/.test(l))return 4; if(/writ.*test|red/.test(l))return 5; if(/impl|green|refac/.test(l))return 6; if(/full.*test|running.*test|test.*suite/.test(l))return 7; if(/commit|push/.test(l))return 8; if(/pr|pull/.test(l))return 9; if(/resolv|compl|done/.test(l))return 10; return 0; };
 const planI = s => { if(!s)return 0; const l=s.toLowerCase(); if(/fetch|planning/.test(l))return 0; if(/load|stories/.test(l))return 1; if(/check|existing/.test(l))return 2; if(/analy|scan/.test(l))return 4; if(/resolv|repo|detect/.test(l))return 3; if(/verif|understand/.test(l))return 5; if(/post.*devops|post.*comment|adding.*comment/.test(l))return 9; if(/devops|updat.*desc/.test(l))return 6; if(/spec|generat|story\.md/.test(l))return 7; if(/review|await|present/.test(l))return 8; if(/task.?map/.test(l))return 10; if(/done|complete|clear/.test(l))return 11; return 0; };
 const isPlanStep = s => { if(!s)return false; const l=s.toLowerCase(); return /planning|fetch.*sprint|load.*stories|check.*exist|resolv.*repo|analy.*repo|scan.*for|verif.*understand|updat.*desc|devops|generat.*spec|story\.md|review|await|present|post.*devops|post.*comment|adding.*comment|task.?map/.test(l); };
+const isPrFixStep = s => { if(!s)return false; const l=s.toLowerCase(); return /finding pr|fetching comments|checking out branch|pushing fixes/.test(l); };
 const stepI = s => isPlanStep(s) ? planI(s) : execI(s);
 const getSteps = s => isPlanStep(s) ? PLAN_STEPS : EXEC_STEPS;
 
@@ -1034,9 +1036,12 @@ const STEP_COLORS = {
 };
 function buildHistRow(h, forStoryId, isLive) {
   const isPlan = isPlanStep(h.step);
+  const isPrFix = !isPlan && (isPrFixStep(h.step) || (h.stepLog && h.stepLog.some(function(e) { return isPrFixStep(e.step); })));
+  const typeLabel = isPlan ? 'PLAN' : isPrFix ? 'PR' : 'EXEC';
+  const typeCls = isPlan ? 'ht-plan' : isPrFix ? 'ht-prfix' : 'ht-exec';
   const r = cel('div', 'hist-row');
   // Type badge + timestamp
-  r.appendChild(cel('span', 'hist-type ' + (isPlan ? 'ht-plan' : 'ht-exec'), isPlan ? 'PLAN' : 'EXEC'));
+  r.appendChild(cel('span', 'hist-type ' + typeCls, typeLabel));
   r.appendChild(cel('span', 'hist-ts', D(h.startedAt)));
   // Build step items for both history and live
   var log = h.stepLog || [];
