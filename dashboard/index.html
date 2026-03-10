@@ -271,50 +271,70 @@
   .v-wait { background: var(--amber-light); color: var(--amber); }
   .v-none { background: var(--border); color: var(--mute); }
 
-  /* ── History entries ── */
+  /* ── History runs — mission control timeline ── */
   .hist-row {
-    display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
+    display: flex; align-items: center; gap: 0; padding: 5px 0;
+    border-radius: 5px; transition: background 0.15s;
+  }
+  .hist-row:hover { background: rgba(0,0,0,0.015); }
+  .hist-meta {
+    display: flex; align-items: center; gap: 6px; flex-shrink: 0; width: 130px;
   }
   .hist-ts {
-    font-family: var(--mono); font-size: 10px; color: var(--mute); flex-shrink: 0; min-width: 70px;
+    font-family: var(--mono); font-size: 9px; color: var(--mute); flex-shrink: 0;
+    font-variant-numeric: tabular-nums;
   }
   .hist-type {
-    font-family: var(--mono); font-size: 8px; font-weight: 700; padding: 1px 5px;
-    border-radius: 3px; text-transform: uppercase; letter-spacing: 0.3px; flex-shrink: 0;
+    font-family: var(--mono); font-size: 7px; font-weight: 700; padding: 2px 6px;
+    border-radius: 10px; text-transform: uppercase; letter-spacing: 0.5px; flex-shrink: 0;
+    line-height: 1;
   }
-  .hist-type.ht-plan { background: rgba(6,182,212,0.12); color: #0891b2; }
-  .hist-type.ht-exec { background: rgba(139,92,246,0.12); color: #7c3aed; }
-  .hist-steps { display: flex; gap: 2px; align-items: center; flex-wrap: wrap; }
-  .hist-dot {
-    width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0;
+  .hist-type.ht-plan { background: rgba(6,182,212,0.1); color: #0891b2; border: 1px solid rgba(6,182,212,0.2); }
+  .hist-type.ht-exec { background: rgba(139,92,246,0.1); color: #7c3aed; border: 1px solid rgba(139,92,246,0.2); }
+  .hist-pipeline {
+    display: flex; align-items: center; flex: 1; overflow-x: auto; overflow-y: hidden;
+    scrollbar-width: none; -ms-overflow-style: none;
   }
-  .hist-dot.hd-done { opacity: 0.5; }
-  .hist-dot-label.hd-prev { opacity: 0.45; }
-  .hist-dot.hd-last { box-shadow: 0 0 4px currentColor; }
-  .hist-row.hist-live {
-    background: rgba(67,56,202,0.06); border: 1px solid rgba(67,56,202,0.18);
-    border-radius: 6px; padding: 6px 10px; gap: 8px;
+  .hist-pipeline::-webkit-scrollbar { display: none; }
+  .hist-step-pill {
+    font-family: var(--mono); font-size: 7px; font-weight: 600; padding: 2px 6px;
+    text-transform: uppercase; letter-spacing: 0.2px; flex-shrink: 0;
+    white-space: nowrap; line-height: 1.2; position: relative;
   }
-  .hist-row.hist-live .hist-ts { color: var(--indigo); font-weight: 600; }
-  .hist-row.hist-live .hist-dot { width: 8px; height: 8px; }
-  .hist-row.hist-live .hist-dot-label { font-size: 9px; padding: 2px 6px; }
-  @keyframes liveLastDot { 0%,100%{ opacity:1; } 50%{ opacity:0.4; } }
-  .hist-row.hist-live .hist-dot-label:last-child { animation: liveLastDot 2s ease-in-out infinite; }
-  .hist-dot-label {
-    font-family: var(--mono); font-size: 7px; font-weight: 600; padding: 1px 4px;
-    border-radius: 2px; text-transform: uppercase; letter-spacing: 0.2px; flex-shrink: 0;
+  .hist-step-pill:first-child { border-radius: 3px 0 0 3px; }
+  .hist-step-pill:last-child { border-radius: 0 3px 3px 0; }
+  .hist-step-pill:only-child { border-radius: 3px; }
+  .hist-step-pill.hp-prev { opacity: 0.35; }
+  .hist-step-pill.hp-current { font-size: 8px; padding: 2px 8px; font-weight: 700; }
+  /* Connector line between pills */
+  .hist-conn {
+    width: 8px; height: 1px; flex-shrink: 0; background: var(--border);
   }
+  .hist-conn.hc-done { background: currentColor; opacity: 0.25; }
   .hist-view-btn {
-    font-family: var(--mono); font-size: 8px; font-weight: 600; padding: 2px 8px;
-    border-radius: 3px; border: 1px solid rgba(67,56,202,0.2); background: rgba(67,56,202,0.06);
-    color: var(--indigo); cursor: pointer; text-transform: uppercase; letter-spacing: 0.3px;
-    opacity: 0; transition: opacity 0.15s; flex-shrink: 0; margin-left: auto;
+    font-family: var(--mono); font-size: 7px; font-weight: 600; padding: 2px 8px;
+    border-radius: 10px; border: 1px solid rgba(67,56,202,0.2); background: transparent;
+    color: var(--indigo); cursor: pointer; text-transform: uppercase; letter-spacing: 0.4px;
+    opacity: 0; transition: all 0.15s; flex-shrink: 0; margin-left: auto;
   }
   .hist-row:hover .hist-view-btn { opacity: 1; }
-  .hist-view-btn:hover { background: rgba(67,56,202,0.12); border-color: var(--indigo); }
+  .hist-view-btn:hover { background: rgba(67,56,202,0.08); border-color: var(--indigo); }
+  /* Active run — elevated card */
+  .hist-row.hist-live {
+    background: linear-gradient(135deg, rgba(67,56,202,0.04), rgba(6,182,212,0.03));
+    border: 1px solid rgba(67,56,202,0.15); border-radius: 6px;
+    padding: 8px 12px; box-shadow: 0 1px 4px rgba(67,56,202,0.06);
+  }
+  .hist-row.hist-live .hist-meta { width: auto; }
+  .hist-row.hist-live .hist-ts { color: var(--indigo); font-weight: 600; font-size: 10px; }
+  .hist-row.hist-live .hist-step-pill { font-size: 8px; padding: 3px 8px; }
+  .hist-row.hist-live .hist-step-pill.hp-prev { opacity: 0.5; }
+  .hist-row.hist-live .hist-conn { width: 10px; }
+  @keyframes livePill { 0%,100%{ opacity:1; } 50%{ opacity:0.5; } }
+  .hist-row.hist-live .hist-step-pill.hp-current { animation: livePill 2s ease-in-out infinite; }
   .hist-more {
-    font-family: var(--mono); font-size: 10px; color: var(--indigo);
-    cursor: pointer; padding: 4px 0; user-select: none;
+    font-family: var(--mono); font-size: 9px; color: var(--indigo);
+    cursor: pointer; padding: 4px 0; user-select: none; letter-spacing: 0.3px;
   }
   .hist-more:hover { text-decoration: underline; }
 
@@ -969,43 +989,37 @@ const STEP_COLORS = {
   'st-work':'#7c3aed','st-error':'#dc2626'
 };
 function buildHistRow(h, forStoryId) {
-  const r = cel('div', 'detail-row hist-row');
-  // Timestamp
-  r.appendChild(cel('span', 'hist-ts', D(h.startedAt)));
-  // Plan or Execute type badge
+  const r = cel('div', 'hist-row');
+  // Meta: timestamp + type
+  const meta = cel('span', 'hist-meta');
+  meta.appendChild(cel('span', 'hist-ts', D(h.startedAt)));
   const isPlan = isPlanStep(h.step);
-  const typeBadge = cel('span', 'hist-type ' + (isPlan ? 'ht-plan' : 'ht-exec'), isPlan ? 'Plan' : 'Exec');
-  r.appendChild(typeBadge);
-  // Step badges from stepLog (actual recorded steps)
-  const dotsEl = cel('span', 'hist-steps');
+  meta.appendChild(cel('span', 'hist-type ' + (isPlan ? 'ht-plan' : 'ht-exec'), isPlan ? 'Plan' : 'Exec'));
+  r.appendChild(meta);
+  // Pipeline of step pills with connectors
+  const pipe = cel('span', 'hist-pipeline');
   var log = h.stepLog || [];
-  // Filter to steps for this story if forStoryId is set
   if (forStoryId && log.length) {
     log = log.filter(function(e) { return !e.storyId || e.storyId === forStoryId; });
   }
+  var items = [];
   if (log.length) {
-    // Show all recorded steps as labeled badges
-    for (var i = 0; i < log.length; i++) {
-      var scls = stepColor(log[i].step);
-      var isLast = i === log.length - 1;
-      var lbl = cel('span', 'hist-dot-label ' + scls + (isLast ? '' : ' hd-prev'));
-      lbl.textContent = log[i].step;
-      dotsEl.appendChild(lbl);
-    }
+    for (var i = 0; i < log.length; i++) items.push({ name: log[i].step, scls: stepColor(log[i].step), last: i === log.length - 1 });
   } else {
-    // Fallback: infer from final step (old data without stepLog)
     var steps = isPlan ? PLAN_STEPS : EXEC_STEPS;
     var ci = isPlan ? planI(h.step) : execI(h.step);
-    for (var i = 0; i <= ci && i < steps.length; i++) {
-      var scls = stepColor(steps[i]);
-      var isLast = i === ci;
-      var lbl = cel('span', 'hist-dot-label ' + scls + (isLast ? '' : ' hd-prev'));
-      lbl.textContent = steps[i];
-      dotsEl.appendChild(lbl);
-    }
+    for (var i = 0; i <= ci && i < steps.length; i++) items.push({ name: steps[i], scls: stepColor(steps[i]), last: i === ci });
   }
-  r.appendChild(dotsEl);
-  // "Vis plan" button for plan runs
+  for (var i = 0; i < items.length; i++) {
+    if (i > 0) {
+      var conn = cel('span', 'hist-conn' + (items[i-1].last ? '' : ' hc-done'));
+      pipe.appendChild(conn);
+    }
+    var pill = cel('span', 'hist-step-pill ' + items[i].scls + (items[i].last ? ' hp-current' : ' hp-prev'));
+    pill.textContent = items[i].name;
+    pipe.appendChild(pill);
+  }
+  r.appendChild(pipe);
   if (forStoryId && isPlan) {
     var viewBtn = cel('button', 'hist-view-btn', 'Vis plan');
     viewBtn.onclick = function(e) { e.stopPropagation(); openSpecPanel(forStoryId, '', true); };
