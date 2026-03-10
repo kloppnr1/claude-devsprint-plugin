@@ -106,6 +106,11 @@
   .ab-progress .ab-ind { position: absolute; top: 0; left: 0; height: 100%; width: 30%; border-radius: 2px; background: linear-gradient(90deg, transparent, var(--indigo), transparent); animation: abSlide 1.8s ease-in-out infinite; }
   @keyframes abSlide { 0% { left: -30%; } 100% { left: 100%; } }
   .ab-stories { padding: 0 16px 8px 34px; display: flex; flex-direction: column; gap: 3px; }
+  .ab-srow { display: flex; align-items: center; gap: 8px; font-size: 11px; }
+  .ab-srow .id { color: var(--indigo); font-family: var(--mono); font-size: 10px; min-width: 50px; }
+  .ab-srow .name { color: var(--text2); flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 200px; }
+  .ab-srow .ab-sstep { font-family: var(--mono); font-size: 8px; font-weight: 600; padding: 1px 6px; border-radius: 3px; text-transform: uppercase; letter-spacing: 0.3px; }
+  .ab-srow .ab-sdesc { color: var(--dim); font-size: 10px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; }
 
   .st-load { background: rgba(107,114,128,0.15); color: #4b5563; }
   .st-analyze { background: rgba(6,182,212,0.18); color: #0e7490; }
@@ -462,21 +467,41 @@
 </div>
 
 <div class="shell">
-  <!-- Agent Banner - Active -->
+  <!-- Agent Banner - Active (4 stories) -->
   <div class="agent-banner" id="agent-banner">
     <div class="ab-main">
       <div class="ab-pulse"></div>
       <span class="ab-label">ACTIVE</span>
-      <span class="ab-story"><span class="id">#4521</span>Add Stripe webhook handler for subscription renewals</span>
-      <span class="ab-time">12m ago</span>
+      <span class="ab-story">4 stories</span>
+      <span class="ab-time">8m ago</span>
     </div>
-    <div id="ab-extra">
-      <div class="ab-detail">
-        <span class="ab-step st-work">Implement</span>
-        <span class="ab-desc">Writing StripeWebhookController.cs - handling subscription.renewed event</span>
+    <div class="ab-stories">
+      <div class="ab-srow">
+        <span class="id">#4521</span>
+        <span class="name">Add Stripe webhook handler</span>
+        <span class="ab-sstep st-work">Implement</span>
+        <span class="ab-sdesc">Writing StripeWebhookController.cs</span>
       </div>
-      <div class="ab-progress"><div class="ab-ind"></div></div>
+      <div class="ab-srow">
+        <span class="id">#4525</span>
+        <span class="name">Add dark mode support to checkout flow</span>
+        <span class="ab-sstep st-test">Test</span>
+        <span class="ab-sdesc">Running checkout dark mode integration tests</span>
+      </div>
+      <div class="ab-srow">
+        <span class="id">#4530</span>
+        <span class="name">Migrate user sessions from Redis</span>
+        <span class="ab-sstep st-spec">Spec</span>
+        <span class="ab-sdesc">Generating STORY.md with migration strategy</span>
+      </div>
+      <div class="ab-srow">
+        <span class="id">#4540</span>
+        <span class="name">Upgrade Node.js from v18 to v22</span>
+        <span class="ab-sstep st-analyze">Analyze</span>
+        <span class="ab-sdesc">Scanning package.json and engine constraints</span>
+      </div>
     </div>
+    <div class="ab-progress"><div class="ab-ind"></div></div>
   </div>
 
   <!-- Stats -->
@@ -491,12 +516,12 @@
   <!-- Main Content -->
   <div id="main">
 
-    <!-- === Active === -->
+    <!-- === Active (2 EXEC + 2 PLAN) === -->
     <div class="repo-card">
       <div class="status-header sg-active">
         <span class="status-icon">&#9654;</span>
         <span class="status-label">Active</span>
-        <span class="status-count">1</span>
+        <span class="status-count">4</span>
       </div>
       <div class="story-grid">
         <div class="story-row story-live" onclick="toggleDetail(this)">
@@ -506,7 +531,7 @@
           <div class="s-indicators"><span class="ind ind-live">Live</span></div>
           <span class="s-repo"><span class="s-repo-tag">acme-api</span></span>
         </div>
-        <div class="story-detail" id="detail-4521" style="display:none">
+        <div class="story-detail" id="detail-4521">
           <div class="detail-sec">
             <div class="detail-label">Agent</div>
             <div class="hist-row hist-live">
@@ -525,6 +550,100 @@
                 <div class="hist-seg st-devops"><span>Commit</span></div>
                 <div class="hist-seg st-devops"><span>PR</span></div>
                 <div class="hist-seg st-done"><span>Resolve</span></div>
+                <div class="hist-seg st-done"><span>Done</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="story-row story-live" onclick="toggleDetail(this)">
+          <div class="s-id">#4525</div>
+          <span class="s-state"><span class="s-state-tag st-active">Active</span></span>
+          <div class="s-title-cell"><span class="s-title">Add dark mode support to checkout flow</span></div>
+          <div class="s-indicators"><span class="ind ind-live">Live</span></div>
+          <span class="s-repo"><span class="s-repo-tag">acme-frontend</span></span>
+        </div>
+        <div class="story-detail" id="detail-4525">
+          <div class="detail-sec">
+            <div class="detail-label">Agent</div>
+            <div class="hist-row hist-live">
+              <span class="hist-type ht-exec">EXEC</span>
+              <span class="hist-ts">Today 09:52</span>
+              <span class="hist-spacer"></span>
+              <div class="hist-track">
+                <div class="hist-seg st-load hp-prev"><span>Pre-flight</span></div>
+                <div class="hist-seg st-analyze hp-prev"><span>Analyze</span></div>
+                <div class="hist-seg st-test hp-prev"><span>Baseline</span></div>
+                <div class="hist-seg st-devops hp-prev"><span>Branch</span></div>
+                <div class="hist-seg st-analyze hp-prev"><span>Activate</span></div>
+                <div class="hist-seg st-test hp-prev"><span>Tests</span></div>
+                <div class="hist-seg st-work hp-prev"><span>Implement</span></div>
+                <div class="hist-seg st-test hp-current"><span>Test</span></div>
+                <div class="hist-seg st-devops"><span>Commit</span></div>
+                <div class="hist-seg st-devops"><span>PR</span></div>
+                <div class="hist-seg st-done"><span>Resolve</span></div>
+                <div class="hist-seg st-done"><span>Done</span></div>
+              </div>
+            </div>
+          </div>
+          <div class="detail-sec">
+            <div class="detail-label">History</div>
+            <div class="hist-row">
+              <span class="hist-type ht-exec">EXEC</span>
+              <span class="hist-ts">Jun 6 08:30</span>
+              <div class="hist-bar"><div class="hist-bar-fill hb-warn" style="width:65%"></div></div>
+              <span class="hist-result hr-warn">Partial</span>
+              <span class="hist-laststep">Test failures</span>
+            </div>
+            <div class="hist-row">
+              <span class="hist-type ht-plan">PLAN</span>
+              <span class="hist-ts">Jun 5 17:00</span>
+              <div class="hist-bar"><div class="hist-bar-fill hb-ok" style="width:100%"></div></div>
+              <span class="hist-result hr-ok">Done</span>
+              <span class="hist-laststep">Spec ready</span>
+            </div>
+          </div>
+        </div>
+        <div class="story-row story-live" onclick="toggleDetail(this)">
+          <div class="s-id">#4530</div>
+          <span class="s-state"><span class="s-state-tag st-active">Active</span></span>
+          <div class="s-title-cell"><span class="s-title">Migrate user sessions from Redis to DynamoDB</span></div>
+          <div class="s-indicators"><span class="ind ind-live">Live</span></div>
+          <span class="s-repo"><span class="s-repo-tag">acme-api</span></span>
+        </div>
+        <div class="story-detail" id="detail-4530">
+          <div class="detail-sec">
+            <div class="detail-label">Agent</div>
+            <div class="hist-row hist-live">
+              <span class="hist-type ht-plan">PLAN</span>
+              <span class="hist-ts">Today 09:55</span>
+              <span class="hist-spacer"></span>
+              <div class="hist-track">
+                <div class="hist-seg st-load hp-prev"><span>Load</span></div>
+                <div class="hist-seg st-analyze hp-prev"><span>Analyze</span></div>
+                <div class="hist-seg st-spec hp-current"><span>Spec</span></div>
+                <div class="hist-seg st-done"><span>Done</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="story-row story-live" onclick="toggleDetail(this)">
+          <div class="s-id">#4540</div>
+          <span class="s-state"><span class="s-state-tag st-new">New</span></span>
+          <div class="s-title-cell"><span class="s-title">Upgrade Node.js from v18 to v22</span></div>
+          <div class="s-indicators"><span class="ind ind-live">Live</span></div>
+          <span class="s-repo"><span class="s-repo-tag">acme-frontend</span></span>
+        </div>
+        <div class="story-detail" id="detail-4540">
+          <div class="detail-sec">
+            <div class="detail-label">Agent</div>
+            <div class="hist-row hist-live">
+              <span class="hist-type ht-plan">PLAN</span>
+              <span class="hist-ts">Today 09:58</span>
+              <span class="hist-spacer"></span>
+              <div class="hist-track">
+                <div class="hist-seg st-load hp-prev"><span>Load</span></div>
+                <div class="hist-seg st-analyze hp-current"><span>Analyze</span></div>
+                <div class="hist-seg st-spec"><span>Spec</span></div>
                 <div class="hist-seg st-done"><span>Done</span></div>
               </div>
             </div>
@@ -613,70 +732,14 @@
       </div>
     </div>
 
-    <!-- === Partial === -->
-    <div class="repo-card">
-      <div class="status-header sg-partial">
-        <span class="status-icon">&#9684;</span>
-        <span class="status-label">Partial</span>
-        <span class="status-count">1</span>
-      </div>
-      <div class="story-grid">
-        <div class="story-row" onclick="toggleDetail(this)">
-          <div class="s-id">#4525</div>
-          <span class="s-state"><span class="s-state-tag st-active">Active</span></span>
-          <div class="s-title-cell"><span class="s-title">Add dark mode support to checkout flow</span><button class="btn-plan" onclick="demoToast(event)" style="right:108px">Re-analyze</button><button class="btn-exec" onclick="demoToast(event)">Execute</button></div>
-          <div class="s-indicators"><span class="ind ind-partial">Partial</span></div>
-          <span class="s-repo"><span class="s-repo-tag">acme-frontend</span></span>
-        </div>
-        <div class="story-detail" id="detail-4525" style="display:none">
-          <div class="detail-sec">
-            <div class="detail-label">History</div>
-            <div class="hist-row">
-              <span class="hist-type ht-exec">EXEC</span>
-              <span class="hist-ts">Jun 6 08:30</span>
-              <div class="hist-bar"><div class="hist-bar-fill hb-warn" style="width:65%"></div></div>
-              <span class="hist-result hr-warn">Partial</span>
-              <span class="hist-laststep">Test failures</span>
-            </div>
-            <div class="hist-row">
-              <span class="hist-type ht-plan">PLAN</span>
-              <span class="hist-ts">Jun 5 17:00</span>
-              <div class="hist-bar"><div class="hist-bar-fill hb-ok" style="width:100%"></div></div>
-              <span class="hist-result hr-ok">Done</span>
-              <span class="hist-laststep">Spec ready</span>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-
     <!-- === Planned === -->
     <div class="repo-card">
       <div class="status-header sg-planned">
         <span class="status-icon">&#9675;</span>
         <span class="status-label">Planned</span>
-        <span class="status-count">2</span>
+        <span class="status-count">1</span>
       </div>
       <div class="story-grid">
-        <div class="story-row" onclick="toggleDetail(this)">
-          <div class="s-id">#4530</div>
-          <span class="s-state"><span class="s-state-tag st-active">Active</span></span>
-          <div class="s-title-cell"><span class="s-title">Migrate user sessions from Redis to DynamoDB</span><button class="btn-plan" onclick="demoToast(event)" style="right:108px">Re-analyze</button><button class="btn-exec" onclick="demoToast(event)">Execute</button></div>
-          <div class="s-indicators"><span class="ind ind-planned">Planned</span></div>
-          <span class="s-repo"><span class="s-repo-tag">acme-api</span></span>
-        </div>
-        <div class="story-detail" id="detail-4530" style="display:none">
-          <div class="detail-sec">
-            <div class="detail-label">History</div>
-            <div class="hist-row">
-              <span class="hist-type ht-plan">PLAN</span>
-              <span class="hist-ts">Jun 4 16:10</span>
-              <div class="hist-bar"><div class="hist-bar-fill hb-ok" style="width:100%"></div></div>
-              <span class="hist-result hr-ok">Done</span>
-              <span class="hist-laststep">Spec ready</span>
-            </div>
-          </div>
-        </div>
         <div class="story-row" onclick="toggleDetail(this)">
           <div class="s-id">#4531</div>
           <span class="s-state"><span class="s-state-tag st-active">Active</span></span>
@@ -695,24 +758,6 @@
               <span class="hist-laststep">Spec ready</span>
             </div>
           </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- === Not planned === -->
-    <div class="repo-card">
-      <div class="status-header sg-unplanned">
-        <span class="status-icon">&#8211;</span>
-        <span class="status-label">Not planned</span>
-        <span class="status-count">1</span>
-      </div>
-      <div class="story-grid">
-        <div class="story-row">
-          <div class="s-id">#4540</div>
-          <span class="s-state"><span class="s-state-tag st-new">New</span></span>
-          <div class="s-title-cell"><span class="s-title">Upgrade Node.js from v18 to v22</span><button class="btn-plan" onclick="demoToast(event)">Analyze</button></div>
-          <div class="s-indicators"></div>
-          <span class="s-repo"><span class="s-repo-tag">acme-frontend</span></span>
         </div>
       </div>
     </div>
