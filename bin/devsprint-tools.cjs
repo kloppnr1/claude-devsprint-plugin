@@ -2116,7 +2116,7 @@ async function cmdGetPrThreads(cwd, args) {
       });
 
     if (unresolvedOnly) {
-      threads = threads.filter(t => t.status === 'active' || t.status === 'pending');
+      threads = threads.filter(t => t.status === 'active' || t.status === 'pending' || t.status === 'unknown');
     }
 
     // Filter out empty threads (no user comments)
