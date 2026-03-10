@@ -949,7 +949,7 @@ const STEP_COLORS = {
   'st-devops':'#2563eb','st-done':'#16a34a','st-test':'#ea580c',
   'st-work':'#7c3aed','st-error':'#dc2626'
 };
-function buildHistRow(h) {
+function buildHistRow(h, forStoryId) {
   const r = cel('div', 'detail-row hist-row');
   // Timestamp
   r.appendChild(cel('span', 'hist-ts', D(h.startedAt)));
@@ -957,34 +957,54 @@ function buildHistRow(h) {
   const isPlan = isPlanStep(h.step);
   const typeBadge = cel('span', 'hist-type ' + (isPlan ? 'ht-plan' : 'ht-exec'), isPlan ? 'Plan' : 'Exec');
   r.appendChild(typeBadge);
-  // Step dots
-  const steps = isPlan ? PLAN_STEPS : EXEC_STEPS;
-  const ci = isPlan ? planI(h.step) : execI(h.step);
+  // Step badges from stepLog (actual recorded steps)
   const dotsEl = cel('span', 'hist-steps');
-  for (var i = 0; i < steps.length; i++) {
-    if (i <= ci) {
-      // Determine color for this step based on step name
-      var fakeStep = steps[i];
-      var col = STEP_COLORS[stepColor(fakeStep)] || '#6b7280';
-      if (i === ci) {
-        // Last reached step — show as label
-        var scls = stepColor(fakeStep);
+  var log = h.stepLog || [];
+  // Filter to steps for this story if forStoryId is set
+  if (forStoryId && log.length) {
+    log = log.filter(function(e) { return !e.storyId || e.storyId === forStoryId; });
+  }
+  if (log.length) {
+    // Show actual recorded steps as badges
+    for (var i = 0; i < log.length; i++) {
+      var scls = stepColor(log[i].step);
+      var isLast = i === log.length - 1;
+      if (isLast) {
         var lbl = cel('span', 'hist-dot-label ' + scls);
-        lbl.textContent = steps[i];
+        lbl.textContent = log[i].step;
         dotsEl.appendChild(lbl);
       } else {
-        // Completed step — small dot
+        var col = STEP_COLORS[scls] || '#6b7280';
         var dot = cel('span', 'hist-dot hd-done');
         dot.style.background = col;
+        dot.title = log[i].step;
+        dotsEl.appendChild(dot);
+      }
+    }
+  } else {
+    // Fallback: infer from final step (old data without stepLog)
+    var steps = isPlan ? PLAN_STEPS : EXEC_STEPS;
+    var ci = isPlan ? planI(h.step) : execI(h.step);
+    for (var i = 0; i < steps.length; i++) {
+      var fakeStep = steps[i];
+      var col = STEP_COLORS[stepColor(fakeStep)] || '#6b7280';
+      if (i <= ci) {
+        if (i === ci) {
+          var lbl = cel('span', 'hist-dot-label ' + stepColor(fakeStep));
+          lbl.textContent = steps[i];
+          dotsEl.appendChild(lbl);
+        } else {
+          var dot = cel('span', 'hist-dot hd-done');
+          dot.style.background = col;
+          dot.title = steps[i];
+          dotsEl.appendChild(dot);
+        }
+      } else {
+        var dot = cel('span', 'hist-dot');
+        dot.style.background = 'var(--border)';
         dot.title = steps[i];
         dotsEl.appendChild(dot);
       }
-    } else {
-      // Future step — grey dot
-      var dot = cel('span', 'hist-dot');
-      dot.style.background = 'var(--border)';
-      dot.title = steps[i];
-      dotsEl.appendChild(dot);
     }
   }
   r.appendChild(dotsEl);
@@ -1138,12 +1158,12 @@ function buildStoryRow(s, ctx) {
     const LIMIT = 5;
     const visible = hist.slice(0, LIMIT);
     const overflow = hist.length > LIMIT;
-    for (const h of visible) sec.appendChild(buildHistRow(h));
+    for (const h of visible) sec.appendChild(buildHistRow(h, s.id));
     if (overflow) {
       const moreBtn = cel('div', 'hist-more', '\u25B6 Vis alle (' + hist.length + ')');
       const moreSection = cel('div', 'hist-overflow');
       moreSection.style.display = 'none';
-      for (const h of hist.slice(LIMIT)) moreSection.appendChild(buildHistRow(h));
+      for (const h of hist.slice(LIMIT)) moreSection.appendChild(buildHistRow(h, s.id));
       moreBtn.onclick = function(e) {
         e.stopPropagation();
         const show = moreSection.style.display === 'none';
