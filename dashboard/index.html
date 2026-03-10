@@ -275,13 +275,26 @@
 
   /* ── History entries ── */
   .hist-row {
-    display: grid; grid-template-columns: 140px 1fr auto; gap: 6px; align-items: center;
+    display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
   }
-  .hist-step {
-    font-family: var(--mono); font-size: 9px; font-weight: 600;
-    padding: 2px 6px; border-radius: 3px; background: var(--border);
-    color: var(--dim); text-transform: uppercase; letter-spacing: 0.2px;
-    white-space: nowrap; text-align: center;
+  .hist-ts {
+    font-family: var(--mono); font-size: 10px; color: var(--mute); flex-shrink: 0; min-width: 70px;
+  }
+  .hist-type {
+    font-family: var(--mono); font-size: 8px; font-weight: 700; padding: 1px 5px;
+    border-radius: 3px; text-transform: uppercase; letter-spacing: 0.3px; flex-shrink: 0;
+  }
+  .hist-type.ht-plan { background: rgba(6,182,212,0.12); color: #0891b2; }
+  .hist-type.ht-exec { background: rgba(139,92,246,0.12); color: #7c3aed; }
+  .hist-steps { display: flex; gap: 2px; align-items: center; flex-wrap: wrap; }
+  .hist-dot {
+    width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0;
+  }
+  .hist-dot.hd-done { opacity: 0.5; }
+  .hist-dot.hd-last { box-shadow: 0 0 4px currentColor; }
+  .hist-dot-label {
+    font-family: var(--mono); font-size: 7px; font-weight: 600; padding: 1px 4px;
+    border-radius: 2px; text-transform: uppercase; letter-spacing: 0.2px; flex-shrink: 0;
   }
   .hist-more {
     font-family: var(--mono); font-size: 10px; color: var(--indigo);
@@ -930,6 +943,54 @@ function fillIndicators(el, s, ctx) {
   }
 }
 
+/* ── Build a history run row with step dots ── */
+const STEP_COLORS = {
+  'st-load':'#6b7280','st-analyze':'#0891b2','st-spec':'#d97706',
+  'st-devops':'#2563eb','st-done':'#16a34a','st-test':'#ea580c',
+  'st-work':'#7c3aed','st-error':'#dc2626'
+};
+function buildHistRow(h) {
+  const r = cel('div', 'detail-row hist-row');
+  // Timestamp
+  r.appendChild(cel('span', 'hist-ts', D(h.startedAt)));
+  // Plan or Execute type badge
+  const isPlan = isPlanStep(h.step);
+  const typeBadge = cel('span', 'hist-type ' + (isPlan ? 'ht-plan' : 'ht-exec'), isPlan ? 'Plan' : 'Exec');
+  r.appendChild(typeBadge);
+  // Step dots
+  const steps = isPlan ? PLAN_STEPS : EXEC_STEPS;
+  const ci = isPlan ? planI(h.step) : execI(h.step);
+  const dotsEl = cel('span', 'hist-steps');
+  for (var i = 0; i < steps.length; i++) {
+    if (i <= ci) {
+      // Determine color for this step based on step name
+      var fakeStep = steps[i];
+      var col = STEP_COLORS[stepColor(fakeStep)] || '#6b7280';
+      if (i === ci) {
+        // Last reached step — show as label
+        var scls = stepColor(fakeStep);
+        var lbl = cel('span', 'hist-dot-label ' + scls);
+        lbl.textContent = steps[i];
+        dotsEl.appendChild(lbl);
+      } else {
+        // Completed step — small dot
+        var dot = cel('span', 'hist-dot hd-done');
+        dot.style.background = col;
+        dot.title = steps[i];
+        dotsEl.appendChild(dot);
+      }
+    } else {
+      // Future step — grey dot
+      var dot = cel('span', 'hist-dot');
+      dot.style.background = 'var(--border)';
+      dot.title = steps[i];
+      dotsEl.appendChild(dot);
+    }
+  }
+  r.appendChild(dotsEl);
+  return r;
+}
+
 /* ── Build a story row + detail panel (DOM, no innerHTML) ── */
 function buildStoryRow(s, ctx) {
   const { exM, prM, ag, sRM } = ctx;
@@ -1077,24 +1138,12 @@ function buildStoryRow(s, ctx) {
     const LIMIT = 5;
     const visible = hist.slice(0, LIMIT);
     const overflow = hist.length > LIMIT;
-    for (const h of visible) {
-      const r = cel('div', 'detail-row hist-row');
-      r.appendChild(cel('span', 'hist-step', h.step || ''));
-      r.appendChild(cel('span', 'txt', h.detail || ''));
-      r.appendChild(cel('span', 'ts', D(h.startedAt)));
-      sec.appendChild(r);
-    }
+    for (const h of visible) sec.appendChild(buildHistRow(h));
     if (overflow) {
       const moreBtn = cel('div', 'hist-more', '\u25B6 Vis alle (' + hist.length + ')');
       const moreSection = cel('div', 'hist-overflow');
       moreSection.style.display = 'none';
-      for (const h of hist.slice(LIMIT)) {
-        const r = cel('div', 'detail-row hist-row');
-        r.appendChild(cel('span', 'hist-step', h.step || ''));
-        r.appendChild(cel('span', 'txt', h.detail || ''));
-        r.appendChild(cel('span', 'ts', D(h.startedAt)));
-        moreSection.appendChild(r);
-      }
+      for (const h of hist.slice(LIMIT)) moreSection.appendChild(buildHistRow(h));
       moreBtn.onclick = function(e) {
         e.stopPropagation();
         const show = moreSection.style.display === 'none';
