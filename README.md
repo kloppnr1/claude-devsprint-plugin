@@ -317,6 +317,18 @@ A real-time web dashboard for monitoring your sprint. Shows story status, active
 
 ![Dashboard overview](dashboard/screenshots/dashboard-overview.png)
 
+Click any story to expand it and see PR status, reviewer votes, execution history, and available actions:
+
+![Story detail with PR and history](dashboard/screenshots/dashboard-story-detail.png)
+
+Completed stories show the full lifecycle — Plan, PR Fix, and Exec runs with progress bars:
+
+![PR and execution history](dashboard/screenshots/dashboard-pr-history.png)
+
+The daily overview shows a chronological feed of all sprint activity:
+
+![Daily overview](dashboard/screenshots/dashboard-daily.png)
+
 ### Start the dashboard
 
 ```bash

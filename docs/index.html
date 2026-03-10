@@ -493,7 +493,7 @@
 
     <!-- === Active === -->
     <div class="repo-card">
-      <div class="status-header sg-active" style="padding:10px 16px; border-bottom:1px solid var(--border)">
+      <div class="status-header sg-active">
         <span class="status-icon">&#9654;</span>
         <span class="status-label">Active</span>
         <span class="status-count">1</span>
@@ -501,16 +501,16 @@
       <div class="story-grid">
         <div class="story-row story-live" onclick="toggleDetail(this)">
           <div class="s-id">#4521</div>
-          <div class="s-repo"><span class="s-repo-tag">acme-api</span></div>
-          <div class="s-title-cell"><span class="s-title">Add Stripe webhook handler for subscription renewals</span><button class="btn-exec" onclick="demoToast(event)">Execute</button></div>
+          <span class="s-state"><span class="s-state-tag st-active">Active</span></span>
+          <div class="s-title-cell"><span class="s-title">Add Stripe webhook handler for subscription renewals</span></div>
           <div class="s-indicators"><span class="ind ind-live">Live</span></div>
-          <div class="s-state"><span class="s-state-tag st-active">Active</span></div>
+          <span class="s-repo"><span class="s-repo-tag">acme-api</span></span>
         </div>
         <div class="story-detail" id="detail-4521" style="display:none">
           <div class="detail-sec">
-            <div class="detail-label">Execution</div>
+            <div class="detail-label">Agent</div>
             <div class="hist-row hist-live">
-              <span class="hist-type ht-exec">Exec</span>
+              <span class="hist-type ht-exec">EXEC</span>
               <span class="hist-ts">Today 09:47</span>
               <span class="hist-spacer"></span>
               <div class="hist-track">
@@ -529,61 +529,46 @@
               </div>
             </div>
           </div>
-          <div class="detail-sec">
-            <div class="detail-label">Step Log</div>
-            <div class="detail-row"><div class="d-dot d-dot-green"></div><span class="txt">Pre-flight checks passed</span><span class="ts">09:47</span></div>
-            <div class="detail-row"><div class="d-dot d-dot-green"></div><span class="txt">Analyzing story requirements and codebase</span><span class="ts">09:48</span></div>
-            <div class="detail-row"><div class="d-dot d-dot-green"></div><span class="txt">Baseline tests: 142 passed, 0 failed</span><span class="ts">09:50</span></div>
-            <div class="detail-row"><div class="d-dot d-dot-green"></div><span class="txt">Created branch feature/4521-stripe-webhook</span><span class="ts">09:51</span></div>
-            <div class="detail-row"><div class="d-dot d-dot-green"></div><span class="txt">Writing test: StripeWebhookTests.cs</span><span class="ts">09:53</span></div>
-            <div class="detail-row"><div class="d-dot d-dot-live"></div><span class="txt">Implementing StripeWebhookController.cs</span><span class="ts">09:55</span></div>
-          </div>
         </div>
       </div>
     </div>
 
     <!-- === Awaiting verification === -->
     <div class="repo-card">
-      <div class="status-header sg-review" style="padding:10px 16px; border-bottom:1px solid var(--border)">
-        <span class="status-icon">&#9203;</span>
+      <div class="status-header sg-review">
+        <span class="status-icon">&#8987;</span>
         <span class="status-label">Awaiting verification</span>
         <span class="status-count">2</span>
       </div>
       <div class="story-grid">
         <div class="story-row" onclick="toggleDetail(this)">
           <div class="s-id">#4518</div>
-          <div class="s-repo"><span class="s-repo-tag">acme-api</span></div>
+          <span class="s-state"><span class="s-state-tag st-resolved">Resolved</span></span>
           <div class="s-title-cell"><span class="s-title">Fix cart total calculation with discount codes</span><button class="btn-exec" style="background:var(--green)" onclick="demoToast(event)">Approve</button></div>
-          <div class="s-indicators"><span class="ind ind-pr-active">PR Active</span></div>
-          <div class="s-state"><span class="s-state-tag st-resolved">Resolved</span></div>
+          <div class="s-indicators"><span class="ind ind-pr-active">PR active</span></div>
+          <span class="s-repo"><span class="s-repo-tag">acme-api</span></span>
         </div>
         <div class="story-detail" id="detail-4518" style="display:none">
           <div class="detail-sec">
-            <div class="detail-label">Pull Requests</div>
+            <div class="detail-label">Pull Request</div>
             <div class="pr-line">
-              <div class="pr-icon pri-active">&#8593;</div>
+              <span class="pr-icon pri-active">&#8634;</span>
               <a href="#" onclick="demoToast(event)">Fix discount code stacking and percentage rounding</a>
-              <div class="votes"><span class="vote v-wait">?</span><span class="vote v-yes">&#10003;</span></div>
-              <button class="btn-prfix" onclick="demoToast(event)">PR Fix</button>
+              <span class="votes"><span class="vote v-wait">?</span><span class="vote v-yes">&#10003;</span></span>
+              <button class="btn-prfix" onclick="demoToast(event)">Fix PR</button>
             </div>
-          </div>
-          <div class="detail-sec">
-            <div class="detail-label">Recent Commits</div>
-            <div class="commit-line"><span class="c-hash">a3f9c21</span><span class="c-msg">fix: handle percentage discount rounding to 2 decimals</span><span class="c-date">Jun 5</span></div>
-            <div class="commit-line"><span class="c-hash">b7e2d44</span><span class="c-msg">fix: prevent stacking of single-use discount codes</span><span class="c-date">Jun 5</span></div>
-            <div class="commit-line"><span class="c-hash">c1a8f90</span><span class="c-msg">test: add cart discount edge case tests</span><span class="c-date">Jun 5</span></div>
           </div>
           <div class="detail-sec">
             <div class="detail-label">History</div>
             <div class="hist-row">
-              <span class="hist-type ht-exec">Exec</span>
+              <span class="hist-type ht-exec">EXEC</span>
               <span class="hist-ts">Jun 5 14:22</span>
               <div class="hist-bar"><div class="hist-bar-fill hb-ok" style="width:100%"></div></div>
               <span class="hist-result hr-ok">Done</span>
               <span class="hist-laststep">PR Created</span>
             </div>
             <div class="hist-row">
-              <span class="hist-type ht-plan">Plan</span>
+              <span class="hist-type ht-plan">PLAN</span>
               <span class="hist-ts">Jun 5 13:40</span>
               <div class="hist-bar"><div class="hist-bar-fill hb-ok" style="width:100%"></div></div>
               <span class="hist-result hr-ok">Done</span>
@@ -593,30 +578,24 @@
         </div>
         <div class="story-row" onclick="toggleDetail(this)">
           <div class="s-id">#4519</div>
-          <div class="s-repo"><span class="s-repo-tag">acme-frontend</span></div>
+          <span class="s-state"><span class="s-state-tag st-resolved">Resolved</span></span>
           <div class="s-title-cell"><span class="s-title">Implement product search with Elasticsearch</span><button class="btn-exec" style="background:var(--green)" onclick="demoToast(event)">Approve</button></div>
-          <div class="s-indicators"><span class="ind ind-pr-merged">Merged</span></div>
-          <div class="s-state"><span class="s-state-tag st-resolved">Resolved</span></div>
+          <div class="s-indicators"><span class="ind ind-pr-merged">PR merged</span></div>
+          <span class="s-repo"><span class="s-repo-tag">acme-frontend</span></span>
         </div>
         <div class="story-detail" id="detail-4519" style="display:none">
           <div class="detail-sec">
-            <div class="detail-label">Pull Requests</div>
+            <div class="detail-label">Pull Request</div>
             <div class="pr-line">
-              <div class="pr-icon pri-merged">&#10003;</div>
+              <span class="pr-icon pri-merged">&#10003;</span>
               <a href="#" onclick="demoToast(event)">feat: add Elasticsearch-powered product search with autocomplete</a>
-              <div class="votes"><span class="vote v-yes">&#10003;</span><span class="vote v-yes">&#10003;</span></div>
+              <span class="votes"><span class="vote v-yes">&#10003;</span><span class="vote v-yes">&#10003;</span></span>
             </div>
-          </div>
-          <div class="detail-sec">
-            <div class="detail-label">Recent Commits</div>
-            <div class="commit-line"><span class="c-hash">d4e5f67</span><span class="c-msg">feat: add SearchBar component with debounced ES queries</span><span class="c-date">Jun 4</span></div>
-            <div class="commit-line"><span class="c-hash">e8a1b23</span><span class="c-msg">feat: add search results page with highlighting</span><span class="c-date">Jun 4</span></div>
-            <div class="commit-line"><span class="c-hash">f2c3d45</span><span class="c-msg">test: add SearchBar and results integration tests</span><span class="c-date">Jun 4</span></div>
           </div>
           <div class="detail-sec">
             <div class="detail-label">History</div>
             <div class="hist-row">
-              <span class="hist-type ht-exec">Exec</span>
+              <span class="hist-type ht-exec">EXEC</span>
               <span class="hist-ts">Jun 4 10:15</span>
               <div class="hist-bar"><div class="hist-bar-fill hb-ok" style="width:100%"></div></div>
               <span class="hist-result hr-ok">Done</span>
@@ -636,7 +615,7 @@
 
     <!-- === Partial === -->
     <div class="repo-card">
-      <div class="status-header sg-partial" style="padding:10px 16px; border-bottom:1px solid var(--border)">
+      <div class="status-header sg-partial">
         <span class="status-icon">&#9684;</span>
         <span class="status-label">Partial</span>
         <span class="status-count">1</span>
@@ -644,33 +623,28 @@
       <div class="story-grid">
         <div class="story-row" onclick="toggleDetail(this)">
           <div class="s-id">#4525</div>
-          <div class="s-repo"><span class="s-repo-tag">acme-frontend</span></div>
-          <div class="s-title-cell"><span class="s-title">Add dark mode support to checkout flow</span><button class="btn-exec" onclick="demoToast(event)">Execute</button></div>
+          <span class="s-state"><span class="s-state-tag st-active">Active</span></span>
+          <div class="s-title-cell"><span class="s-title">Add dark mode support to checkout flow</span><button class="btn-plan" onclick="demoToast(event)" style="right:108px">Re-analyze</button><button class="btn-exec" onclick="demoToast(event)">Execute</button></div>
           <div class="s-indicators"><span class="ind ind-partial">Partial</span></div>
-          <div class="s-state"><span class="s-state-tag st-active">Active</span></div>
+          <span class="s-repo"><span class="s-repo-tag">acme-frontend</span></span>
         </div>
         <div class="story-detail" id="detail-4525" style="display:none">
           <div class="detail-sec">
             <div class="detail-label">History</div>
             <div class="hist-row">
-              <span class="hist-type ht-exec">Exec</span>
+              <span class="hist-type ht-exec">EXEC</span>
               <span class="hist-ts">Jun 6 08:30</span>
               <div class="hist-bar"><div class="hist-bar-fill hb-warn" style="width:65%"></div></div>
               <span class="hist-result hr-warn">Partial</span>
               <span class="hist-laststep">Test failures</span>
             </div>
             <div class="hist-row">
-              <span class="hist-type ht-plan">Plan</span>
+              <span class="hist-type ht-plan">PLAN</span>
               <span class="hist-ts">Jun 5 17:00</span>
               <div class="hist-bar"><div class="hist-bar-fill hb-ok" style="width:100%"></div></div>
               <span class="hist-result hr-ok">Done</span>
               <span class="hist-laststep">Spec ready</span>
             </div>
-          </div>
-          <div class="detail-sec">
-            <div class="detail-label">Recent Commits</div>
-            <div class="commit-line"><span class="c-hash">a1b2c3d</span><span class="c-msg">feat: add CSS custom properties for dark mode theming</span><span class="c-date">Jun 6</span></div>
-            <div class="commit-line"><span class="c-hash">e4f5a6b</span><span class="c-msg">feat: toggle component and localStorage persistence</span><span class="c-date">Jun 6</span></div>
           </div>
         </div>
       </div>
@@ -678,7 +652,7 @@
 
     <!-- === Planned === -->
     <div class="repo-card">
-      <div class="status-header sg-planned" style="padding:10px 16px; border-bottom:1px solid var(--border)">
+      <div class="status-header sg-planned">
         <span class="status-icon">&#9675;</span>
         <span class="status-label">Planned</span>
         <span class="status-count">2</span>
@@ -686,16 +660,16 @@
       <div class="story-grid">
         <div class="story-row" onclick="toggleDetail(this)">
           <div class="s-id">#4530</div>
-          <div class="s-repo"><span class="s-repo-tag">acme-api</span></div>
-          <div class="s-title-cell"><span class="s-title">Migrate user sessions from Redis to DynamoDB</span><button class="btn-exec" onclick="demoToast(event)">Execute</button></div>
+          <span class="s-state"><span class="s-state-tag st-active">Active</span></span>
+          <div class="s-title-cell"><span class="s-title">Migrate user sessions from Redis to DynamoDB</span><button class="btn-plan" onclick="demoToast(event)" style="right:108px">Re-analyze</button><button class="btn-exec" onclick="demoToast(event)">Execute</button></div>
           <div class="s-indicators"><span class="ind ind-planned">Planned</span></div>
-          <div class="s-state"><span class="s-state-tag st-active">Active</span></div>
+          <span class="s-repo"><span class="s-repo-tag">acme-api</span></span>
         </div>
         <div class="story-detail" id="detail-4530" style="display:none">
           <div class="detail-sec">
             <div class="detail-label">History</div>
             <div class="hist-row">
-              <span class="hist-type ht-plan">Plan</span>
+              <span class="hist-type ht-plan">PLAN</span>
               <span class="hist-ts">Jun 4 16:10</span>
               <div class="hist-bar"><div class="hist-bar-fill hb-ok" style="width:100%"></div></div>
               <span class="hist-result hr-ok">Done</span>
@@ -705,16 +679,16 @@
         </div>
         <div class="story-row" onclick="toggleDetail(this)">
           <div class="s-id">#4531</div>
-          <div class="s-repo"><span class="s-repo-tag">acme-api</span></div>
-          <div class="s-title-cell"><span class="s-title">Add rate limiting to public API endpoints</span><button class="btn-exec" onclick="demoToast(event)">Execute</button></div>
+          <span class="s-state"><span class="s-state-tag st-active">Active</span></span>
+          <div class="s-title-cell"><span class="s-title">Add rate limiting to public API endpoints</span><button class="btn-plan" onclick="demoToast(event)" style="right:108px">Re-analyze</button><button class="btn-exec" onclick="demoToast(event)">Execute</button></div>
           <div class="s-indicators"><span class="ind ind-planned">Planned</span></div>
-          <div class="s-state"><span class="s-state-tag st-active">Active</span></div>
+          <span class="s-repo"><span class="s-repo-tag">acme-api</span></span>
         </div>
         <div class="story-detail" id="detail-4531" style="display:none">
           <div class="detail-sec">
             <div class="detail-label">History</div>
             <div class="hist-row">
-              <span class="hist-type ht-plan">Plan</span>
+              <span class="hist-type ht-plan">PLAN</span>
               <span class="hist-ts">Jun 4 16:35</span>
               <div class="hist-bar"><div class="hist-bar-fill hb-ok" style="width:100%"></div></div>
               <span class="hist-result hr-ok">Done</span>
@@ -727,7 +701,7 @@
 
     <!-- === Not planned === -->
     <div class="repo-card">
-      <div class="status-header sg-unplanned" style="padding:10px 16px; border-bottom:1px solid var(--border)">
+      <div class="status-header sg-unplanned">
         <span class="status-icon">&#8211;</span>
         <span class="status-label">Not planned</span>
         <span class="status-count">1</span>
@@ -735,35 +709,35 @@
       <div class="story-grid">
         <div class="story-row">
           <div class="s-id">#4540</div>
-          <div class="s-repo"><span class="s-repo-tag">acme-frontend</span></div>
+          <span class="s-state"><span class="s-state-tag st-new">New</span></span>
           <div class="s-title-cell"><span class="s-title">Upgrade Node.js from v18 to v22</span><button class="btn-plan" onclick="demoToast(event)">Analyze</button></div>
           <div class="s-indicators"></div>
-          <div class="s-state"><span class="s-state-tag st-new">New</span></div>
+          <span class="s-repo"><span class="s-repo-tag">acme-frontend</span></span>
         </div>
       </div>
     </div>
 
     <!-- === Blocked === -->
     <div class="repo-card">
-      <div class="status-header sg-blocked" style="padding:10px 16px; border-bottom:1px solid var(--border)">
-        <span class="status-icon">&#9928;</span>
+      <div class="status-header sg-blocked">
+        <span class="status-icon">&#9256;</span>
         <span class="status-label">Blocked</span>
         <span class="status-count">1</span>
       </div>
       <div class="story-grid">
         <div class="story-row">
           <div class="s-id">#4535</div>
-          <div class="s-repo"><span class="s-repo-tag">acme-api</span></div>
+          <span class="s-state"><span class="s-state-tag st-new">New</span></span>
           <div class="s-title-cell"><span class="s-title">BLOCKED: Waiting for Stripe sandbox access</span></div>
           <div class="s-indicators"></div>
-          <div class="s-state"><span class="s-state-tag st-new">New</span></div>
+          <span class="s-repo"><span class="s-repo-tag">acme-api</span></span>
         </div>
       </div>
     </div>
 
     <!-- === Done === -->
     <div class="repo-card">
-      <div class="status-header sg-done" style="padding:10px 16px; border-bottom:1px solid var(--border)">
+      <div class="status-header sg-done">
         <span class="status-icon">&#10003;</span>
         <span class="status-label">Done</span>
         <span class="status-count">2</span>
@@ -771,24 +745,24 @@
       <div class="story-grid">
         <div class="story-row" onclick="toggleDetail(this)">
           <div class="s-id">#4510</div>
-          <div class="s-repo"><span class="s-repo-tag">acme-payments</span></div>
+          <span class="s-state"><span class="s-state-tag st-closed">Closed</span></span>
           <div class="s-title-cell"><span class="s-title">Add order export to CSV</span></div>
-          <div class="s-indicators"><span class="ind ind-done">Done</span></div>
-          <div class="s-state"><span class="s-state-tag st-closed">Closed</span></div>
+          <div class="s-indicators"><span class="ind ind-pr-merged">PR merged</span></div>
+          <span class="s-repo"><span class="s-repo-tag">acme-payments</span></span>
         </div>
         <div class="story-detail" id="detail-4510" style="display:none">
           <div class="detail-sec">
-            <div class="detail-label">Pull Requests</div>
+            <div class="detail-label">Pull Request</div>
             <div class="pr-line">
-              <div class="pr-icon pri-merged">&#10003;</div>
+              <span class="pr-icon pri-merged">&#10003;</span>
               <a href="#" onclick="demoToast(event)">feat: add CSV export for order history with date filters</a>
-              <div class="votes"><span class="vote v-yes">&#10003;</span><span class="vote v-yes">&#10003;</span></div>
+              <span class="votes"><span class="vote v-yes">&#10003;</span><span class="vote v-yes">&#10003;</span></span>
             </div>
           </div>
           <div class="detail-sec">
             <div class="detail-label">History</div>
             <div class="hist-row">
-              <span class="hist-type ht-exec">Exec</span>
+              <span class="hist-type ht-exec">EXEC</span>
               <span class="hist-ts">Jun 3 11:20</span>
               <div class="hist-bar"><div class="hist-bar-fill hb-ok" style="width:100%"></div></div>
               <span class="hist-result hr-ok">Done</span>
@@ -798,24 +772,24 @@
         </div>
         <div class="story-row" onclick="toggleDetail(this)">
           <div class="s-id">#4512</div>
-          <div class="s-repo"><span class="s-repo-tag">acme-payments</span></div>
+          <span class="s-state"><span class="s-state-tag st-closed">Closed</span></span>
           <div class="s-title-cell"><span class="s-title">Fix timezone handling in delivery estimates</span></div>
-          <div class="s-indicators"><span class="ind ind-done">Done</span></div>
-          <div class="s-state"><span class="s-state-tag st-closed">Closed</span></div>
+          <div class="s-indicators"><span class="ind ind-pr-merged">PR merged</span></div>
+          <span class="s-repo"><span class="s-repo-tag">acme-payments</span></span>
         </div>
         <div class="story-detail" id="detail-4512" style="display:none">
           <div class="detail-sec">
-            <div class="detail-label">Pull Requests</div>
+            <div class="detail-label">Pull Request</div>
             <div class="pr-line">
-              <div class="pr-icon pri-merged">&#10003;</div>
+              <span class="pr-icon pri-merged">&#10003;</span>
               <a href="#" onclick="demoToast(event)">fix: normalize all delivery dates to UTC before customer timezone conversion</a>
-              <div class="votes"><span class="vote v-yes">&#10003;</span><span class="vote v-yes">&#10003;</span></div>
+              <span class="votes"><span class="vote v-yes">&#10003;</span><span class="vote v-yes">&#10003;</span></span>
             </div>
           </div>
           <div class="detail-sec">
             <div class="detail-label">History</div>
             <div class="hist-row">
-              <span class="hist-type ht-exec">Exec</span>
+              <span class="hist-type ht-exec">EXEC</span>
               <span class="hist-ts">Jun 2 15:45</span>
               <div class="hist-bar"><div class="hist-bar-fill hb-ok" style="width:100%"></div></div>
               <span class="hist-result hr-ok">Done</span>
@@ -829,7 +803,7 @@
               <span class="hist-laststep">Review fixed</span>
             </div>
             <div class="hist-row">
-              <span class="hist-type ht-plan">Plan</span>
+              <span class="hist-type ht-plan">PLAN</span>
               <span class="hist-ts">Jun 2 14:00</span>
               <div class="hist-bar"><div class="hist-bar-fill hb-ok" style="width:100%"></div></div>
               <span class="hist-result hr-ok">Done</span>
@@ -848,34 +822,34 @@
     <div id="daily">
       <div class="day-group">
         <div class="day-date">Today - Jun 9</div>
-        <div class="day-item"><span class="day-tag tag-exec">Exec</span><span class="day-text">#4521 Add Stripe webhook handler - started execution</span></div>
-        <div class="day-item"><span class="day-tag tag-commit">Commit</span><span class="day-text">acme-api: feat: add StripeWebhookController scaffold (a3f9c21)</span></div>
-        <div class="day-item"><span class="day-tag tag-pr">PR</span><span class="day-text">#4518 Fix discount code stacking - review comment from Sarah K.</span></div>
+        <div class="day-item"><span class="day-tag tag-exec">exec</span><span class="day-text">#4521 Add Stripe webhook handler - started execution</span></div>
+        <div class="day-item"><span class="day-tag tag-commit">commit</span><span class="day-text">acme-api: feat: add StripeWebhookController scaffold (a3f9c21)</span></div>
+        <div class="day-item"><span class="day-tag tag-pr">pr</span><span class="day-text">#4518 Fix discount code stacking - review comment from Sarah K.</span></div>
       </div>
       <div class="day-group">
         <div class="day-date">Jun 6</div>
-        <div class="day-item"><span class="day-tag tag-exec">Exec</span><span class="day-text">#4525 Dark mode checkout - partial completion (3/5 tasks done)</span></div>
-        <div class="day-item"><span class="day-tag tag-commit">Commit</span><span class="day-text">acme-frontend: feat: dark mode CSS custom properties (a1b2c3d)</span></div>
-        <div class="day-item"><span class="day-tag tag-commit">Commit</span><span class="day-text">acme-frontend: feat: dark mode toggle component (e4f5a6b)</span></div>
+        <div class="day-item"><span class="day-tag tag-exec">exec</span><span class="day-text">#4525 Dark mode checkout - partial completion (3/5 tasks done)</span></div>
+        <div class="day-item"><span class="day-tag tag-commit">commit</span><span class="day-text">acme-frontend: feat: dark mode CSS custom properties (a1b2c3d)</span></div>
+        <div class="day-item"><span class="day-tag tag-commit">commit</span><span class="day-text">acme-frontend: feat: dark mode toggle component (e4f5a6b)</span></div>
       </div>
       <div class="day-group">
         <div class="day-date">Jun 5</div>
-        <div class="day-item"><span class="day-tag tag-exec">Exec</span><span class="day-text">#4518 Fix cart total calculation - completed, PR created</span></div>
-        <div class="day-item"><span class="day-tag tag-commit">Commit</span><span class="day-text">acme-api: fix: handle percentage discount rounding (a3f9c21)</span></div>
-        <div class="day-item"><span class="day-tag tag-story">Story</span><span class="day-text">#4525 Dark mode checkout - spec generated and approved</span></div>
-        <div class="day-item"><span class="day-tag tag-task">Task</span><span class="day-text">#4530 Session migration - plan created, 4 tasks generated</span></div>
-        <div class="day-item"><span class="day-tag tag-task">Task</span><span class="day-text">#4531 Rate limiting - plan created, 3 tasks generated</span></div>
+        <div class="day-item"><span class="day-tag tag-exec">exec</span><span class="day-text">#4518 Fix cart total calculation - completed, PR created</span></div>
+        <div class="day-item"><span class="day-tag tag-commit">commit</span><span class="day-text">acme-api: fix: handle percentage discount rounding (a3f9c21)</span></div>
+        <div class="day-item"><span class="day-tag tag-story">story</span><span class="day-text">#4525 Dark mode checkout - spec generated and approved</span></div>
+        <div class="day-item"><span class="day-tag tag-task">task</span><span class="day-text">#4530 Session migration - plan created, 4 tasks generated</span></div>
+        <div class="day-item"><span class="day-tag tag-task">task</span><span class="day-text">#4531 Rate limiting - plan created, 3 tasks generated</span></div>
       </div>
       <div class="day-group">
         <div class="day-date">Jun 4</div>
-        <div class="day-item"><span class="day-tag tag-exec">Exec</span><span class="day-text">#4519 Product search with Elasticsearch - completed, PR created</span></div>
-        <div class="day-item"><span class="day-tag tag-pr">PR</span><span class="day-text">#4519 Search implementation - PR approved and merged</span></div>
-        <div class="day-item"><span class="day-tag tag-commit">Commit</span><span class="day-text">acme-frontend: feat: SearchBar with debounced ES queries (d4e5f67)</span></div>
+        <div class="day-item"><span class="day-tag tag-exec">exec</span><span class="day-text">#4519 Product search with Elasticsearch - completed, PR created</span></div>
+        <div class="day-item"><span class="day-tag tag-pr">pr</span><span class="day-text">#4519 Search implementation - PR approved and merged</span></div>
+        <div class="day-item"><span class="day-tag tag-commit">commit</span><span class="day-text">acme-frontend: feat: SearchBar with debounced ES queries (d4e5f67)</span></div>
       </div>
       <div class="day-group">
         <div class="day-date">Jun 3</div>
-        <div class="day-item"><span class="day-tag tag-pr">PR</span><span class="day-text">#4510 Order CSV export - PR approved and merged</span></div>
-        <div class="day-item"><span class="day-tag tag-pr">PR</span><span class="day-text">#4512 Timezone fix - review comments addressed, re-approved</span></div>
+        <div class="day-item"><span class="day-tag tag-pr">pr</span><span class="day-text">#4510 Order CSV export - PR approved and merged</span></div>
+        <div class="day-item"><span class="day-tag tag-pr">pr</span><span class="day-text">#4512 Timezone fix - review comments addressed, re-approved</span></div>
       </div>
     </div>
   </div>
