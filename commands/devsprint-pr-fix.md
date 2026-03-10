@@ -25,8 +25,9 @@ When the user needs to provide open-ended feedback or corrections, respond with 
 <objective>
 Fetch review comments from an Azure DevOps pull request, check out the PR branch, present the issues to the user, fix them, and push the fixes.
 
-Arguments: `<story-id>` — required. The PR and repository are auto-detected by searching for a PR whose title starts with `#{storyId}`.
+Arguments: `<story-id>` — required. Optional: `--pr-id <id> --repo-name <name>` to skip PR lookup.
 Example: `/devsprint-pr-fix 42917`
+Example with direct PR: `/devsprint-pr-fix 42917 --pr-id 4225 --repo-name NewSettlement.CustomerSupport`
 </objective>
 
 <execution_context>
@@ -67,10 +68,12 @@ At the end (success or failure), clear status:
 
 **Step 1 — Parse arguments:**
 
-Extract `storyId` from the arguments.
-- First argument: Story ID (numeric, with or without `#` prefix)
+Extract from the arguments:
+- First argument: `storyId` (numeric, with or without `#` prefix) — required
+- `--pr-id <id>`: PR ID (optional, skips find-pr step)
+- `--repo-name <name>`: Repository name (optional, required with --pr-id)
 
-If missing, display usage: "Usage: `/devsprint-pr-fix <story-id>`" and stop.
+If storyId is missing, display usage: "Usage: `/devsprint-pr-fix <story-id>`" and stop.
 
 **Step 2 — Check prerequisites:**
 
@@ -79,9 +82,10 @@ If missing, display usage: "Usage: `/devsprint-pr-fix <story-id>`" and stop.
 
 **Step 3 — Find PR by story ID:**
 
+If `--pr-id` and `--repo-name` were provided, skip the find-pr call and use those values directly. Still run find-pr to get `sourceBranch` and `targetBranch`:
 Run: `node ~/.claude/bin/devsprint-tools.cjs find-pr --story-id {storyId} --cwd $CWD`
 
-If exit 1: show error. The story may not have a PR yet. Stop.
+If exit 1 and no --pr-id provided: show error. The story may not have a PR yet. Stop.
 
 Parse the JSON. Store `prId`, `repoName`, `sourceBranch`, `targetBranch`. Display:
 ```

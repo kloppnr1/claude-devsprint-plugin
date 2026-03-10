@@ -906,10 +906,10 @@ function launchPlan(storyId, title) {
 }
 
 const _activePrFix = {};
-function launchPrFix(storyId) {
+function launchPrFix(storyId, prId, repoName) {
   if (_activePrFix[storyId]) return;
   _activePrFix[storyId] = true;
-  fetch('/api/pr-fix', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({storyId: storyId}) })
+  fetch('/api/pr-fix', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({storyId: storyId, prId: prId, repoName: repoName}) })
     .then(r => r.json())
     .then(() => {
       const toast = cel('div', '');
@@ -1216,7 +1216,7 @@ function buildStoryRow(s, ctx) {
     }
     if (ps === 'active') {
       var fixBtn = cel('button', 'btn-prfix', 'Fix PR');
-      fixBtn.onclick = function(e) { e.stopPropagation(); launchPrFix(s.id); };
+      fixBtn.onclick = function(e) { e.stopPropagation(); launchPrFix(s.id, pr.prId, pr.repoName); };
       pl.appendChild(fixBtn);
     }
     sec.appendChild(pl);

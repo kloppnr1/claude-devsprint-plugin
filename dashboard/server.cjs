@@ -401,11 +401,14 @@ async function handleRequest(req, res) {
             let body = '';
             req.on('data', c => body += c);
             await new Promise(r => req.on('end', r));
-            const { storyId: prFixId } = JSON.parse(body);
+            const { storyId: prFixId, prId: prFixPrId, repoName: prFixRepo } = JSON.parse(body);
             if (!prFixId) { res.writeHead(400); res.end(JSON.stringify({ error: 'storyId required' })); return; }
             const { exec: prFixExec } = require('child_process');
             const prFixBat = path.join(CWD, '.planning', '_run_prfix.bat');
-            fs.writeFileSync(prFixBat, `@echo off\nset "CLAUDECODE="\ncd /d "${CWD}"\nclaude -p "/devsprint-pr-fix ${prFixId} --headless" --dangerously-skip-permissions --verbose\n`);
+            let prFixArgs = `${prFixId} --headless`;
+            if (prFixPrId) prFixArgs += ` --pr-id ${prFixPrId}`;
+            if (prFixRepo) prFixArgs += ` --repo-name ${prFixRepo}`;
+            fs.writeFileSync(prFixBat, `@echo off\nset "CLAUDECODE="\ncd /d "${CWD}"\nclaude -p "/devsprint-pr-fix ${prFixArgs}" --dangerously-skip-permissions --verbose\n`);
             prFixExec(`start /min cmd /c "${prFixBat}"`, { shell: true });
             data = { status: 'launched', storyId: prFixId };
           } else {
