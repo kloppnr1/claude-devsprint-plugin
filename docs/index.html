@@ -138,23 +138,6 @@
     transition: border-color 0.2s;
   }
   .repo-card:hover { border-color: var(--mute); }
-  .repo-header {
-    padding: 10px 16px; display: flex; align-items: center; gap: 10px;
-    background: var(--bg2); border-bottom: 1px solid var(--border);
-  }
-  .repo-icon { font-size: 14px; opacity: 0.5; }
-  .repo-name {
-    font-family: var(--mono); font-size: 12px; font-weight: 600;
-    color: var(--text); flex: 1;
-  }
-  .repo-badges { display: flex; gap: 4px; }
-  .badge {
-    font-family: var(--mono); font-size: 9px; font-weight: 600;
-    padding: 2px 7px; border-radius: 4px; letter-spacing: 0.2px;
-  }
-  .badge-count { background: var(--indigo-light); color: var(--indigo); }
-  .badge-branch { background: var(--purple-light); color: var(--purple); }
-  .badge-dirty { background: var(--amber-light); color: var(--amber); }
 
   /* Story Grid */
   .story-grid {
@@ -508,23 +491,14 @@
   <!-- Main Content -->
   <div id="main">
 
-    <!-- === acme-api === -->
+    <!-- === Active === -->
     <div class="repo-card">
-      <div class="repo-header">
-        <span class="repo-icon">&#128230;</span>
-        <span class="repo-name">acme-api</span>
-        <div class="repo-badges">
-          <span class="badge badge-count">5 stories</span>
-          <span class="badge badge-branch">feature/4521</span>
-        </div>
+      <div class="status-header sg-active" style="padding:10px 16px; border-bottom:1px solid var(--border)">
+        <span class="status-icon">&#9654;</span>
+        <span class="status-label">Active</span>
+        <span class="status-count">1</span>
       </div>
       <div class="story-grid">
-        <!-- Status: Active -->
-        <div class="status-header sg-active" style="grid-column:1/-1">
-          <span class="status-icon">&#9654;</span>
-          <span class="status-label">Active</span>
-          <span class="status-count">1</span>
-        </div>
         <div class="story-row story-live" onclick="toggleDetail(this)">
           <div class="s-id">#4521</div>
           <div class="s-repo"><span class="s-repo-tag">acme-api</span></div>
@@ -565,17 +539,21 @@
             <div class="detail-row"><div class="d-dot d-dot-live"></div><span class="txt">Implementing StripeWebhookController.cs</span><span class="ts">09:55</span></div>
           </div>
         </div>
+      </div>
+    </div>
 
-        <!-- Status: Awaiting verification -->
-        <div class="status-header sg-review" style="grid-column:1/-1">
-          <span class="status-icon">&#128269;</span>
-          <span class="status-label">Awaiting verification</span>
-          <span class="status-count">1</span>
-        </div>
+    <!-- === Awaiting verification === -->
+    <div class="repo-card">
+      <div class="status-header sg-review" style="padding:10px 16px; border-bottom:1px solid var(--border)">
+        <span class="status-icon">&#9203;</span>
+        <span class="status-label">Awaiting verification</span>
+        <span class="status-count">2</span>
+      </div>
+      <div class="story-grid">
         <div class="story-row" onclick="toggleDetail(this)">
           <div class="s-id">#4518</div>
           <div class="s-repo"><span class="s-repo-tag">acme-api</span></div>
-          <div class="s-title-cell"><span class="s-title">Fix cart total calculation with discount codes</span></div>
+          <div class="s-title-cell"><span class="s-title">Fix cart total calculation with discount codes</span><button class="btn-exec" style="background:var(--green)" onclick="demoToast(event)">Approve</button></div>
           <div class="s-indicators"><span class="ind ind-pr-active">PR Active</span></div>
           <div class="s-state"><span class="s-state-tag st-resolved">Resolved</span></div>
         </div>
@@ -613,13 +591,99 @@
             </div>
           </div>
         </div>
-
-        <!-- Status: Planned -->
-        <div class="status-header sg-planned" style="grid-column:1/-1">
-          <span class="status-icon">&#128203;</span>
-          <span class="status-label">Planned</span>
-          <span class="status-count">2</span>
+        <div class="story-row" onclick="toggleDetail(this)">
+          <div class="s-id">#4519</div>
+          <div class="s-repo"><span class="s-repo-tag">acme-frontend</span></div>
+          <div class="s-title-cell"><span class="s-title">Implement product search with Elasticsearch</span><button class="btn-exec" style="background:var(--green)" onclick="demoToast(event)">Approve</button></div>
+          <div class="s-indicators"><span class="ind ind-pr-merged">Merged</span></div>
+          <div class="s-state"><span class="s-state-tag st-resolved">Resolved</span></div>
         </div>
+        <div class="story-detail" id="detail-4519" style="display:none">
+          <div class="detail-sec">
+            <div class="detail-label">Pull Requests</div>
+            <div class="pr-line">
+              <div class="pr-icon pri-merged">&#10003;</div>
+              <a href="#" onclick="demoToast(event)">feat: add Elasticsearch-powered product search with autocomplete</a>
+              <div class="votes"><span class="vote v-yes">&#10003;</span><span class="vote v-yes">&#10003;</span></div>
+            </div>
+          </div>
+          <div class="detail-sec">
+            <div class="detail-label">Recent Commits</div>
+            <div class="commit-line"><span class="c-hash">d4e5f67</span><span class="c-msg">feat: add SearchBar component with debounced ES queries</span><span class="c-date">Jun 4</span></div>
+            <div class="commit-line"><span class="c-hash">e8a1b23</span><span class="c-msg">feat: add search results page with highlighting</span><span class="c-date">Jun 4</span></div>
+            <div class="commit-line"><span class="c-hash">f2c3d45</span><span class="c-msg">test: add SearchBar and results integration tests</span><span class="c-date">Jun 4</span></div>
+          </div>
+          <div class="detail-sec">
+            <div class="detail-label">History</div>
+            <div class="hist-row">
+              <span class="hist-type ht-exec">Exec</span>
+              <span class="hist-ts">Jun 4 10:15</span>
+              <div class="hist-bar"><div class="hist-bar-fill hb-ok" style="width:100%"></div></div>
+              <span class="hist-result hr-ok">Done</span>
+              <span class="hist-laststep">PR Merged</span>
+            </div>
+            <div class="hist-row">
+              <span class="hist-type ht-prfix">PR</span>
+              <span class="hist-ts">Jun 4 14:30</span>
+              <div class="hist-bar"><div class="hist-bar-fill hb-ok" style="width:100%"></div></div>
+              <span class="hist-result hr-ok">Done</span>
+              <span class="hist-laststep">Fixes pushed</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- === Partial === -->
+    <div class="repo-card">
+      <div class="status-header sg-partial" style="padding:10px 16px; border-bottom:1px solid var(--border)">
+        <span class="status-icon">&#9684;</span>
+        <span class="status-label">Partial</span>
+        <span class="status-count">1</span>
+      </div>
+      <div class="story-grid">
+        <div class="story-row" onclick="toggleDetail(this)">
+          <div class="s-id">#4525</div>
+          <div class="s-repo"><span class="s-repo-tag">acme-frontend</span></div>
+          <div class="s-title-cell"><span class="s-title">Add dark mode support to checkout flow</span><button class="btn-exec" onclick="demoToast(event)">Execute</button></div>
+          <div class="s-indicators"><span class="ind ind-partial">Partial</span></div>
+          <div class="s-state"><span class="s-state-tag st-active">Active</span></div>
+        </div>
+        <div class="story-detail" id="detail-4525" style="display:none">
+          <div class="detail-sec">
+            <div class="detail-label">History</div>
+            <div class="hist-row">
+              <span class="hist-type ht-exec">Exec</span>
+              <span class="hist-ts">Jun 6 08:30</span>
+              <div class="hist-bar"><div class="hist-bar-fill hb-warn" style="width:65%"></div></div>
+              <span class="hist-result hr-warn">Partial</span>
+              <span class="hist-laststep">Test failures</span>
+            </div>
+            <div class="hist-row">
+              <span class="hist-type ht-plan">Plan</span>
+              <span class="hist-ts">Jun 5 17:00</span>
+              <div class="hist-bar"><div class="hist-bar-fill hb-ok" style="width:100%"></div></div>
+              <span class="hist-result hr-ok">Done</span>
+              <span class="hist-laststep">Spec ready</span>
+            </div>
+          </div>
+          <div class="detail-sec">
+            <div class="detail-label">Recent Commits</div>
+            <div class="commit-line"><span class="c-hash">a1b2c3d</span><span class="c-msg">feat: add CSS custom properties for dark mode theming</span><span class="c-date">Jun 6</span></div>
+            <div class="commit-line"><span class="c-hash">e4f5a6b</span><span class="c-msg">feat: toggle component and localStorage persistence</span><span class="c-date">Jun 6</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- === Planned === -->
+    <div class="repo-card">
+      <div class="status-header sg-planned" style="padding:10px 16px; border-bottom:1px solid var(--border)">
+        <span class="status-icon">&#9675;</span>
+        <span class="status-label">Planned</span>
+        <span class="status-count">2</span>
+      </div>
+      <div class="story-grid">
         <div class="story-row" onclick="toggleDetail(this)">
           <div class="s-id">#4530</div>
           <div class="s-repo"><span class="s-repo-tag">acme-api</span></div>
@@ -658,126 +722,17 @@
             </div>
           </div>
         </div>
-
-        <!-- Status: Blocked -->
-        <div class="status-header sg-blocked" style="grid-column:1/-1">
-          <span class="status-icon">&#9940;</span>
-          <span class="status-label">Blocked</span>
-          <span class="status-count">1</span>
-        </div>
-        <div class="story-row">
-          <div class="s-id">#4535</div>
-          <div class="s-repo"><span class="s-repo-tag">acme-api</span></div>
-          <div class="s-title-cell"><span class="s-title">BLOCKED: Waiting for Stripe sandbox access</span></div>
-          <div class="s-indicators"></div>
-          <div class="s-state"><span class="s-state-tag st-new">New</span></div>
-        </div>
       </div>
     </div>
 
-    <!-- === acme-frontend === -->
+    <!-- === Not planned === -->
     <div class="repo-card">
-      <div class="repo-header">
-        <span class="repo-icon">&#128230;</span>
-        <span class="repo-name">acme-frontend</span>
-        <div class="repo-badges">
-          <span class="badge badge-count">3 stories</span>
-          <span class="badge badge-branch">feature/4519</span>
-          <span class="badge badge-dirty">1 dirty</span>
-        </div>
+      <div class="status-header sg-unplanned" style="padding:10px 16px; border-bottom:1px solid var(--border)">
+        <span class="status-icon">&#8211;</span>
+        <span class="status-label">Not planned</span>
+        <span class="status-count">1</span>
       </div>
       <div class="story-grid">
-        <!-- Status: Awaiting verification -->
-        <div class="status-header sg-review" style="grid-column:1/-1">
-          <span class="status-icon">&#128269;</span>
-          <span class="status-label">Awaiting verification</span>
-          <span class="status-count">1</span>
-        </div>
-        <div class="story-row" onclick="toggleDetail(this)">
-          <div class="s-id">#4519</div>
-          <div class="s-repo"><span class="s-repo-tag">acme-frontend</span></div>
-          <div class="s-title-cell"><span class="s-title">Implement product search with Elasticsearch</span></div>
-          <div class="s-indicators"><span class="ind ind-pr-merged">Merged</span></div>
-          <div class="s-state"><span class="s-state-tag st-resolved">Resolved</span></div>
-        </div>
-        <div class="story-detail" id="detail-4519" style="display:none">
-          <div class="detail-sec">
-            <div class="detail-label">Pull Requests</div>
-            <div class="pr-line">
-              <div class="pr-icon pri-merged">&#10003;</div>
-              <a href="#" onclick="demoToast(event)">feat: add Elasticsearch-powered product search with autocomplete</a>
-              <div class="votes"><span class="vote v-yes">&#10003;</span><span class="vote v-yes">&#10003;</span></div>
-            </div>
-          </div>
-          <div class="detail-sec">
-            <div class="detail-label">Recent Commits</div>
-            <div class="commit-line"><span class="c-hash">d4e5f67</span><span class="c-msg">feat: add SearchBar component with debounced ES queries</span><span class="c-date">Jun 4</span></div>
-            <div class="commit-line"><span class="c-hash">e8a1b23</span><span class="c-msg">feat: add search results page with highlighting</span><span class="c-date">Jun 4</span></div>
-            <div class="commit-line"><span class="c-hash">f2c3d45</span><span class="c-msg">test: add SearchBar and results integration tests</span><span class="c-date">Jun 4</span></div>
-          </div>
-          <div class="detail-sec">
-            <div class="detail-label">History</div>
-            <div class="hist-row">
-              <span class="hist-type ht-exec">Exec</span>
-              <span class="hist-ts">Jun 4 10:15</span>
-              <div class="hist-bar"><div class="hist-bar-fill hb-ok" style="width:100%"></div></div>
-              <span class="hist-result hr-ok">Done</span>
-              <span class="hist-laststep">PR Merged</span>
-            </div>
-            <div class="hist-row">
-              <span class="hist-type ht-prfix">PR</span>
-              <span class="hist-ts">Jun 4 14:30</span>
-              <div class="hist-bar"><div class="hist-bar-fill hb-ok" style="width:100%"></div></div>
-              <span class="hist-result hr-ok">Done</span>
-              <span class="hist-laststep">Fixes pushed</span>
-            </div>
-          </div>
-        </div>
-
-        <!-- Status: Partial -->
-        <div class="status-header sg-partial" style="grid-column:1/-1">
-          <span class="status-icon">&#9888;</span>
-          <span class="status-label">Partial</span>
-          <span class="status-count">1</span>
-        </div>
-        <div class="story-row" onclick="toggleDetail(this)">
-          <div class="s-id">#4525</div>
-          <div class="s-repo"><span class="s-repo-tag">acme-frontend</span></div>
-          <div class="s-title-cell"><span class="s-title">Add dark mode support to checkout flow</span><button class="btn-exec" onclick="demoToast(event)">Execute</button></div>
-          <div class="s-indicators"><span class="ind ind-partial">Partial</span></div>
-          <div class="s-state"><span class="s-state-tag st-active">Active</span></div>
-        </div>
-        <div class="story-detail" id="detail-4525" style="display:none">
-          <div class="detail-sec">
-            <div class="detail-label">History</div>
-            <div class="hist-row">
-              <span class="hist-type ht-exec">Exec</span>
-              <span class="hist-ts">Jun 6 08:30</span>
-              <div class="hist-bar"><div class="hist-bar-fill hb-warn" style="width:65%"></div></div>
-              <span class="hist-result hr-warn">Partial</span>
-              <span class="hist-laststep">Test failures</span>
-            </div>
-            <div class="hist-row">
-              <span class="hist-type ht-plan">Plan</span>
-              <span class="hist-ts">Jun 5 17:00</span>
-              <div class="hist-bar"><div class="hist-bar-fill hb-ok" style="width:100%"></div></div>
-              <span class="hist-result hr-ok">Done</span>
-              <span class="hist-laststep">Spec ready</span>
-            </div>
-          </div>
-          <div class="detail-sec">
-            <div class="detail-label">Recent Commits</div>
-            <div class="commit-line"><span class="c-hash">a1b2c3d</span><span class="c-msg">feat: add CSS custom properties for dark mode theming</span><span class="c-date">Jun 6</span></div>
-            <div class="commit-line"><span class="c-hash">e4f5a6b</span><span class="c-msg">feat: toggle component and localStorage persistence</span><span class="c-date">Jun 6</span></div>
-          </div>
-        </div>
-
-        <!-- Status: Not planned -->
-        <div class="status-header sg-unplanned" style="grid-column:1/-1">
-          <span class="status-icon">&#183;</span>
-          <span class="status-label">Not planned</span>
-          <span class="status-count">1</span>
-        </div>
         <div class="story-row">
           <div class="s-id">#4540</div>
           <div class="s-repo"><span class="s-repo-tag">acme-frontend</span></div>
@@ -788,22 +743,32 @@
       </div>
     </div>
 
-    <!-- === acme-payments === -->
+    <!-- === Blocked === -->
     <div class="repo-card">
-      <div class="repo-header">
-        <span class="repo-icon">&#128230;</span>
-        <span class="repo-name">acme-payments</span>
-        <div class="repo-badges">
-          <span class="badge badge-count">2 stories</span>
-        </div>
+      <div class="status-header sg-blocked" style="padding:10px 16px; border-bottom:1px solid var(--border)">
+        <span class="status-icon">&#9928;</span>
+        <span class="status-label">Blocked</span>
+        <span class="status-count">1</span>
       </div>
       <div class="story-grid">
-        <!-- Status: Done -->
-        <div class="status-header sg-done" style="grid-column:1/-1">
-          <span class="status-icon">&#10003;</span>
-          <span class="status-label">Done</span>
-          <span class="status-count">2</span>
+        <div class="story-row">
+          <div class="s-id">#4535</div>
+          <div class="s-repo"><span class="s-repo-tag">acme-api</span></div>
+          <div class="s-title-cell"><span class="s-title">BLOCKED: Waiting for Stripe sandbox access</span></div>
+          <div class="s-indicators"></div>
+          <div class="s-state"><span class="s-state-tag st-new">New</span></div>
         </div>
+      </div>
+    </div>
+
+    <!-- === Done === -->
+    <div class="repo-card">
+      <div class="status-header sg-done" style="padding:10px 16px; border-bottom:1px solid var(--border)">
+        <span class="status-icon">&#10003;</span>
+        <span class="status-label">Done</span>
+        <span class="status-count">2</span>
+      </div>
+      <div class="story-grid">
         <div class="story-row" onclick="toggleDetail(this)">
           <div class="s-id">#4510</div>
           <div class="s-repo"><span class="s-repo-tag">acme-payments</span></div>
