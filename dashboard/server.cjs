@@ -257,6 +257,28 @@ function getAgentStatus() {
   return readJsonFile(path.join(CWD, '.planning', 'devsprint-agent-status.json'));
 }
 
+function seedAgentStatus(storyId, step, detail) {
+  const statusPath = path.join(CWD, '.planning', 'devsprint-agent-status.json');
+  let existing = { active: null, history: [] };
+  try { if (fs.existsSync(statusPath)) existing = JSON.parse(fs.readFileSync(statusPath, 'utf-8')); } catch {}
+  const now = new Date().toISOString();
+  const sid = parseInt(storyId, 10);
+  existing.active = {
+    storyId: sid,
+    storyTitle: null,
+    step,
+    detail,
+    repo: null,
+    branch: null,
+    command: null,
+    startedAt: now,
+    updatedAt: now,
+    stories: { [String(sid)]: { storyId: sid, storyTitle: null, step, detail, updatedAt: now } },
+    stepLog: [{ step, detail, at: now, storyId: sid }],
+  };
+  fs.writeFileSync(statusPath, JSON.stringify(existing, null, 2), 'utf-8');
+}
+
 async function fetchPRStatus() {
   const execLog = getExecutionLog();
   if (!execLog || !execLog.executions) return [];
@@ -385,6 +407,7 @@ async function handleRequest(req, res) {
             await new Promise(r => req.on('end', r));
             const { storyId } = JSON.parse(body);
             if (!storyId) { res.writeHead(400); res.end(JSON.stringify({ error: 'storyId required' })); return; }
+            seedAgentStatus(storyId, 'Starter', 'Initialiserer execute...');
             const { exec: execFn } = require('child_process');
             const cleanEnv = Object.assign({}, process.env);
             delete cleanEnv.CLAUDECODE;
@@ -403,6 +426,7 @@ async function handleRequest(req, res) {
             await new Promise(r => req.on('end', r));
             const { storyId: prFixId, prId: prFixPrId, repoName: prFixRepo } = JSON.parse(body);
             if (!prFixId) { res.writeHead(400); res.end(JSON.stringify({ error: 'storyId required' })); return; }
+            seedAgentStatus(prFixId, 'Starter', 'Initialiserer PR fix...');
             const { exec: prFixExec } = require('child_process');
             const prFixBat = path.join(CWD, '.planning', '_run_prfix.bat');
             let prFixArgs = `${prFixId} --headless`;
@@ -422,6 +446,7 @@ async function handleRequest(req, res) {
             await new Promise(r => req.on('end', r));
             const { storyId: planId } = JSON.parse(body);
             if (!planId) { res.writeHead(400); res.end(JSON.stringify({ error: 'storyId required' })); return; }
+            seedAgentStatus(planId, 'Starter', 'Initialiserer analyse...');
             // Clean up stale question/answer files
             const qClean = path.join(CWD, '.planning', 'questions', planId + '.json');
             const aClean = path.join(CWD, '.planning', 'answers', planId + '.json');

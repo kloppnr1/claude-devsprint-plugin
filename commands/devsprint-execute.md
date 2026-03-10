@@ -101,9 +101,7 @@ devsprint-task-map.json structure (written by /devsprint-plan):
       {
         "storyId": 12345,
         "storyTitle": "As a user I want...",
-        "repoPath": "/home/user/repos/MyApp",
-        "taskIds": [12346, 12347, 12348],
-        "taskTitles": { "12346": "Create API endpoint", "12347": "Add frontend form", "12348": "Write tests" }
+        "repoPath": "/home/user/repos/MyApp"
       }
     ]
   }

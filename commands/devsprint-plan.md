@@ -663,8 +663,6 @@ For each **approved** repo, create a mapping entry:
 - `storyId`: the Azure DevOps story ID (number)
 - `storyTitle`: the story title
 - `repoPath`: the resolved local repo path (from Step 4)
-- `taskIds`: array of child task IDs that belong to this story
-- `taskTitles`: object mapping task ID (as string key) to task title
 
 Write the complete map to `$CWD/.planning/devsprint-task-map.json` using the Write tool:
 ```json
@@ -678,7 +676,7 @@ Write the complete map to `$CWD/.planning/devsprint-task-map.json` using the Wri
 
 If all repos were skipped (no approved entries) and no existing file, do NOT write the file.
 
-This file is used for automatic Azure DevOps status updates during execution: tasks are identified by their IDs and can be transitioned New → Active → Resolved using `devsprint-tools.cjs update-state`.
+This file maps stories to their local repo paths for execution.
 
 **Step 12 — Final summary:**
 

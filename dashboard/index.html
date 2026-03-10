@@ -353,6 +353,21 @@
   .hist-row.hist-live { animation: liveGlow 2.5s ease-in-out infinite; }
   @keyframes liveSeg { 0%,100% { opacity: 1; } 50% { opacity: 0.6; } }
   .hist-row.hist-live .hist-seg.hp-current { animation: liveSeg 2s ease-in-out infinite; }
+  .hist-row:not(.hist-live) { cursor: pointer; }
+  .hist-detail {
+    padding: 4px 8px 6px 32px; font-family: var(--mono); font-size: 10px;
+    border-left: 2px solid var(--border-light); margin-left: 14px; margin-bottom: 4px;
+  }
+  .hist-detail-row {
+    display: flex; align-items: center; gap: 8px; padding: 2px 0;
+    color: var(--dim); line-height: 1.5;
+  }
+  .hist-detail-dot {
+    width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0;
+  }
+  .hist-detail-step { color: var(--text2); font-weight: 600; }
+  .hist-detail-info { color: var(--mute); }
+  .hist-detail-time { color: var(--dim); margin-left: auto; flex-shrink: 0; }
   .hist-more {
     font-family: var(--mono); font-size: 10px; color: var(--indigo); font-weight: 600;
     cursor: pointer; padding: 4px 0; user-select: none; letter-spacing: 0.3px;
@@ -1097,6 +1112,37 @@ function buildHistRow(h, forStoryId, isLive) {
     }
     r.appendChild(track);
   }
+  // For completed runs: expandable step detail
+  if (!isLive && log.length) {
+    var wrapper = document.createDocumentFragment();
+    var detail = cel('div', 'hist-detail');
+    detail.style.display = 'none';
+    for (var i = 0; i < log.length; i++) {
+      var dr = cel('div', 'hist-detail-row');
+      var dot = cel('span', 'hist-detail-dot');
+      dot.style.background = STEP_COLORS[stepColor(log[i].step)] || '#6b7280';
+      dr.appendChild(dot);
+      dr.appendChild(cel('span', 'hist-detail-step', log[i].step));
+      if (log[i].detail) dr.appendChild(cel('span', 'hist-detail-info', log[i].detail));
+      if (log[i].at) dr.appendChild(cel('span', 'hist-detail-time', D(log[i].at)));
+      detail.appendChild(dr);
+    }
+    if (h.endedAt) {
+      var dr = cel('div', 'hist-detail-row');
+      dr.appendChild(cel('span', 'hist-detail-dot'));
+      dr.appendChild(cel('span', 'hist-detail-info', isDone ? 'Afsluttet' : isErr ? 'Fejlet' : 'Afbrudt'));
+      dr.appendChild(cel('span', 'hist-detail-time', D(h.endedAt)));
+      detail.appendChild(dr);
+    }
+    r.onclick = function(e) {
+      e.stopPropagation();
+      detail.style.display = detail.style.display === 'none' ? '' : 'none';
+    };
+    var container = cel('div', '');
+    container.appendChild(r);
+    container.appendChild(detail);
+    return container;
+  }
   return r;
 }
 
@@ -1462,7 +1508,7 @@ function renderMain() {
 
   const ag = S.agent;
   const plannedIds = new Set();
-  if (S.map && S.map.mappings) for (const m of S.map.mappings) if (m.taskIds && m.taskIds.length > 0) plannedIds.add(m.storyId);
+  if (S.map && S.map.mappings) for (const m of S.map.mappings) if (m.repoPath) plannedIds.add(m.storyId);
 
   const ctx = { exM, prM, gitM, ag, plannedIds, commitCutoff: weekdayCutoff(3), isDone, sRM };
 
@@ -1635,10 +1681,15 @@ async function refreshAll() {
 
 refreshAll();
 let _lastAgentKey = '';
+let _wasActive = false;
 setInterval(() => F('/api/agent-status').then(d => {
   const aKey = JSON.stringify(d);
   const changed = aKey !== _lastAgentKey;
   _lastAgentKey = aKey;
+  const isActive = !!(d && d.active);
+  // Agent just finished — refresh all data (PRs, execution log, task map, etc.)
+  if (_wasActive && !isActive) refreshAll();
+  _wasActive = isActive;
   S.agent = d; renderAgent(d); updateStoryAgent(d);
   // Re-render board when agent status changes (story grouping + history)
   if (changed && _dom.built) renderMain();

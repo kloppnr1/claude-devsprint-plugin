@@ -1770,10 +1770,31 @@ async function cmdCreateBranch(cwd, args) {
       }
     }
 
-    // Step 3: Check if branch already exists locally
+    // Step 3: Check if branch already exists locally or remotely
     const branchExists = run(`git rev-parse --verify ${branchName}`, repoPath);
     if (branchExists.ok) {
-      // Branch exists — just checkout
+      // Check if the remote branch was already merged (deleted on remote after merge)
+      const remoteCheck = run(`git ls-remote --heads origin ${branchName}`, repoPath);
+      const remoteExists = remoteCheck.ok && remoteCheck.stdout.trim().length > 0;
+
+      if (!remoteExists) {
+        // Remote branch gone (merged & deleted) — create fresh branch with v2 suffix
+        let newName = branchName + '-v2';
+        let suffix = 2;
+        while (run(`git rev-parse --verify ${newName}`, repoPath).ok) {
+          suffix++;
+          newName = branchName + '-v' + suffix;
+        }
+        const create = run(`git checkout -b ${newName} origin/${baseBranch}`, repoPath);
+        if (!create.ok) {
+          console.error(`Failed to create branch ${newName}: ${create.error}`);
+          process.exit(1);
+        }
+        console.log(JSON.stringify({ branch: newName, base: baseBranch, created: true }));
+        process.exit(0);
+      }
+
+      // Branch exists locally and remotely — just checkout
       const checkout = run(`git checkout ${branchName}`, repoPath);
       if (!checkout.ok) {
         console.error(`Failed to checkout existing branch ${branchName}: ${checkout.error}`);
@@ -1862,6 +1883,28 @@ async function cmdCreatePr(cwd, args) {
       process.exit(1);
     }
     const repoName = remoteUrl.stdout.split('/').pop().replace('.git', '');
+
+    // Check for existing PR on this branch
+    const existingPrUrl = `${cfg.org}/${cfg.project}/_apis/git/repositories/${encodeURIComponent(repoName)}/pullrequests?searchCriteria.sourceRefName=refs/heads/${encodeURIComponent(branch)}&searchCriteria.targetRefName=refs/heads/${encodeURIComponent(base)}&api-version=7.1`;
+    const existingRes = await makeRequest(existingPrUrl, encodedPat);
+    if (existingRes.status === 200) {
+      const existingData = JSON.parse(existingRes.body);
+      const existing = (existingData.value || []);
+      const merged = existing.find(p => p.status === 'completed');
+      if (merged) {
+        const webUrl = `${cfg.org}/${cfg.project}/_git/${encodeURIComponent(repoName)}/pullRequest/${merged.pullRequestId}`;
+        console.error(`PR already merged: #${merged.pullRequestId}`);
+        console.log(JSON.stringify({ pr: webUrl, prId: merged.pullRequestId, branch, base, pushed: true, linked: !!storyId, alreadyMerged: true }));
+        process.exit(0);
+      }
+      const active = existing.find(p => p.status === 'active');
+      if (active) {
+        const webUrl = `${cfg.org}/${cfg.project}/_git/${encodeURIComponent(repoName)}/pullRequest/${active.pullRequestId}`;
+        console.error(`PR already exists: #${active.pullRequestId}`);
+        console.log(JSON.stringify({ pr: webUrl, prId: active.pullRequestId, branch, base, pushed: true, linked: !!storyId, alreadyExists: true }));
+        process.exit(0);
+      }
+    }
 
     // Build PR request body
     const prBody = {
