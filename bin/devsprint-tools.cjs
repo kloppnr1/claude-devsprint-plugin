@@ -731,10 +731,11 @@ function cmdReportStatus(cwd, args) {
   const now = new Date().toISOString();
 
   // Build top-level status (reflects most recent update)
+  const newStep = get('--step') || 'unknown';
   const status = {
     storyId: storyId ? parseInt(storyId, 10) : (existing.active ? existing.active.storyId : null),
     storyTitle: get('--story-title') || (existing.active ? existing.active.storyTitle : null),
-    step: get('--step') || 'unknown',
+    step: newStep,
     detail: get('--detail') || null,
     repo: get('--repo') || (existing.active ? existing.active.repo : null),
     branch: get('--branch') || (existing.active ? existing.active.branch : null),
@@ -743,7 +744,14 @@ function cmdReportStatus(cwd, args) {
     updatedAt: now,
     // Preserve per-story tracking map from previous state
     stories: existing.active && existing.active.stories ? { ...existing.active.stories } : {},
+    // Accumulate step log
+    stepLog: existing.active && existing.active.stepLog ? [...existing.active.stepLog] : [],
   };
+  // Append to step log if step changed from last entry
+  const lastLog = status.stepLog.length ? status.stepLog[status.stepLog.length - 1] : null;
+  if (!lastLog || lastLog.step !== newStep) {
+    status.stepLog.push({ step: newStep, detail: get('--detail') || null, at: now, storyId: storyId ? parseInt(storyId, 10) : null });
+  }
 
   // If story-id is provided, upsert into per-story map
   if (storyId) {
