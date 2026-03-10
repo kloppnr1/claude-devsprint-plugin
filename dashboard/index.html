@@ -675,7 +675,7 @@ const EXEC_STEPS=['Pre-flight','Analyze','Baseline','Branch','Activate','Write T
 const PLAN_STEPS=['Fetch','Load','Check','Resolve','Analyze','Verify','DevOps','Spec','Review','Post','Task Map','Done'];
 const execI = s => { if(!s)return 0; const l=s.toLowerCase(); if(/pre.?flight|checking.*state|loading.*spec/.test(l))return 1; if(/baseline|running.*base/.test(l))return 2; if(/branch/.test(l))return 3; if(/activat/.test(l))return 4; if(/writ.*test|red/.test(l))return 5; if(/impl|green|refac/.test(l))return 6; if(/full.*test|running.*test|test.*suite/.test(l))return 7; if(/commit|push/.test(l))return 8; if(/pr|pull/.test(l))return 9; if(/resolv|compl|done/.test(l))return 10; return 0; };
 const planI = s => { if(!s)return 0; const l=s.toLowerCase(); if(/fetch|planning/.test(l))return 0; if(/load|stories/.test(l))return 1; if(/check|existing/.test(l))return 2; if(/analy|scan/.test(l))return 4; if(/resolv|repo|detect/.test(l))return 3; if(/verif|understand/.test(l))return 5; if(/post.*devops|post.*comment|adding.*comment/.test(l))return 9; if(/devops|updat.*desc/.test(l))return 6; if(/spec|generat|story\.md/.test(l))return 7; if(/review|await|present/.test(l))return 8; if(/task.?map/.test(l))return 10; if(/done|complete|clear/.test(l))return 11; return 0; };
-const isPlanStep = s => { if(!s)return false; const l=s.toLowerCase(); return /planning|fetch.*sprint|load.*stories|check.*exist|resolv.*repo|analy.*repo|scan.*for|verif.*understand|updat.*desc|devops|generat.*spec|story\.md|review|await|present|post.*devops|post.*comment|adding.*comment|task.?map/.test(l); };
+const isPlanStep = s => { if(!s)return false; const l=s.toLowerCase(); return /planning|fetch.*sprint|load.*stor|check.*exist|resolv.*repo|analy.*repo|scan.*for|verif.*understand|updat.*desc|devops|generat.*spec|story\.md|review|await|present|post.*devops|post.*comment|adding.*comment|task.?map/.test(l); };
 const isPrFixStep = s => { if(!s)return false; const l=s.toLowerCase(); return /finding pr|fetching comments|checking out branch|pushing fixes/.test(l); };
 const stepI = s => isPlanStep(s) ? planI(s) : execI(s);
 const getSteps = s => isPlanStep(s) ? PLAN_STEPS : EXEC_STEPS;
@@ -1035,7 +1035,7 @@ const STEP_COLORS = {
   'st-work':'#7c3aed','st-error':'#dc2626'
 };
 function buildHistRow(h, forStoryId, isLive) {
-  const isPlan = isPlanStep(h.step);
+  const isPlan = isPlanStep(h.step) || (h.stepLog && h.stepLog.some(function(e) { return isPlanStep(e.step); }));
   const isPrFix = !isPlan && (isPrFixStep(h.step) || (h.stepLog && h.stepLog.some(function(e) { return isPrFixStep(e.step); })));
   const typeLabel = isPlan ? 'PLAN' : isPrFix ? 'PR' : 'EXEC';
   const typeCls = isPlan ? 'ht-plan' : isPrFix ? 'ht-prfix' : 'ht-exec';
@@ -1176,7 +1176,7 @@ function buildStoryRow(s, ctx) {
   // Detail panel
   const detail = cel('div', 'story-detail');
   detail.dataset.storyDetail = s.id;
-  detail.style.display = 'none';
+  detail.style.display = live ? 'block' : 'none';
 
   // Agent sub-section (always present, shown/hidden by updateStoryAgent)
   const agSec = cel('div', 'detail-sec agent-detail');
@@ -1189,39 +1189,8 @@ function buildStoryRow(s, ctx) {
 
   // Execution info is shown via EXEC history rows — no separate section needed
 
-  if (pr) {
-    const ps = pr.prStatus === 'completed' ? 'merged' : pr.prStatus === 'abandoned' ? 'rejected' : 'active';
-    const ic = ps === 'merged' ? '\u2713' : ps === 'rejected' ? '\u2717' : '\u21BA';
-    const sec = cel('div', 'detail-sec');
-    sec.appendChild(cel('div', 'detail-label', 'Pull Request'));
-    const pl = cel('div', 'pr-line');
-    pl.appendChild(cel('span', 'pr-icon pri-' + ps, ic));
-    const a = document.createElement('a');
-    a.href = pr.prUrl || '#'; a.target = '_blank';
-    a.textContent = pr.prTitle || 'PR #' + pr.prId;
-    pl.appendChild(a);
-    if (pr.reviewers && pr.reviewers.length) {
-      const vs = cel('span', 'votes');
-      for (const rv of pr.reviewers) {
-        let c = 'v-none', ch = '\u2013';
-        if (rv.vote === 10) { c = 'v-yes'; ch = '\u2713'; }
-        else if (rv.vote === 5) { c = 'v-yes'; ch = '~'; }
-        else if (rv.vote === -10) { c = 'v-no'; ch = '\u2717'; }
-        else if (rv.vote === -5) { c = 'v-wait'; ch = '?'; }
-        const v = cel('span', 'vote ' + c, ch);
-        v.title = rv.name || '';
-        vs.appendChild(v);
-      }
-      pl.appendChild(vs);
-    }
-    if (ps === 'active') {
-      var fixBtn = cel('button', 'btn-prfix', 'Fix PR');
-      fixBtn.onclick = function(e) { e.stopPropagation(); launchPrFix(s.id, pr.prId, pr.repoName); };
-      pl.appendChild(fixBtn);
-    }
-    sec.appendChild(pl);
-    detail.appendChild(sec);
-  }
+  const prSec = buildPRSection(s.id, pr);
+  if (prSec) detail.appendChild(prSec);
 
   // History section — show devsprint activity for this story
   if (hist.length) {
@@ -1251,6 +1220,43 @@ function buildStoryRow(s, ctx) {
   return { row, detail, inds, stateEl };
 }
 
+/* ── Build PR detail section ── */
+function buildPRSection(storyId, pr) {
+  if (!pr) return null;
+  const ps = pr.prStatus === 'completed' ? 'merged' : pr.prStatus === 'abandoned' ? 'rejected' : 'active';
+  const ic = ps === 'merged' ? '\u2713' : ps === 'rejected' ? '\u2717' : '\u21BA';
+  const sec = cel('div', 'detail-sec');
+  sec.dataset.prSection = storyId;
+  sec.appendChild(cel('div', 'detail-label', 'Pull Request'));
+  const pl = cel('div', 'pr-line');
+  pl.appendChild(cel('span', 'pr-icon pri-' + ps, ic));
+  const a = document.createElement('a');
+  a.href = pr.prUrl || '#'; a.target = '_blank';
+  a.textContent = pr.prTitle || 'PR #' + pr.prId;
+  pl.appendChild(a);
+  if (pr.reviewers && pr.reviewers.length) {
+    const vs = cel('span', 'votes');
+    for (const rv of pr.reviewers) {
+      let c = 'v-none', ch = '\u2013';
+      if (rv.vote === 10) { c = 'v-yes'; ch = '\u2713'; }
+      else if (rv.vote === 5) { c = 'v-yes'; ch = '~'; }
+      else if (rv.vote === -10) { c = 'v-no'; ch = '\u2717'; }
+      else if (rv.vote === -5) { c = 'v-wait'; ch = '?'; }
+      const v = cel('span', 'vote ' + c, ch);
+      v.title = rv.name || '';
+      vs.appendChild(v);
+    }
+    pl.appendChild(vs);
+  }
+  if (ps === 'active') {
+    var fixBtn = cel('button', 'btn-prfix', 'Fix PR');
+    fixBtn.onclick = function(e) { e.stopPropagation(); launchPrFix(storyId, pr.prId, pr.repoName); };
+    pl.appendChild(fixBtn);
+  }
+  sec.appendChild(pl);
+  return sec;
+}
+
 /* ── Update existing story row DOM (fast path) ── */
 function updateStoryDom(sd, s, ctx) {
   const sc = SC(s.state);
@@ -1258,6 +1264,18 @@ function updateStoryDom(sd, s, ctx) {
   const tag = sd.stateEl.querySelector('.s-state-tag');
   if (tag) { tag.className = 's-state-tag ' + stCls; tag.textContent = s.state; }
   fillIndicators(sd.inds, s, ctx);
+  // Update PR section in detail panel
+  const pr = ctx.prM[s.id];
+  const oldPr = sd.detail.querySelector('[data-pr-section="' + s.id + '"]');
+  const newPr = buildPRSection(s.id, pr);
+  if (oldPr && newPr) oldPr.replaceWith(newPr);
+  else if (oldPr && !newPr) oldPr.remove();
+  else if (!oldPr && newPr) {
+    // Insert before history section or at end
+    const histSec = sd.detail.querySelector('.detail-sec:last-child');
+    if (histSec) sd.detail.insertBefore(newPr, histSec);
+    else sd.detail.appendChild(newPr);
+  }
 }
 
 /* ── Build commits section (DOM, no innerHTML) ── */
@@ -1327,16 +1345,16 @@ function classifyStory(s, ctx) {
   // Blocked — title contains BLOKERET, or execution was skipped due to blocker
   if (s.title && s.title.toUpperCase().includes('BLOKERET')) return 'blocked';
   const ex = exM[s.id];
-  if (ex && ex.status === 'skipped') return 'blocked';
+  if (ex && !ex.reanalyzed && ex.status === 'skipped') return 'blocked';
   // Live — agent is currently working on it
   if (ag && ag.active) {
     const stories = ag.active.stories || {};
     if (ag.active.storyId === s.id || stories[String(s.id)]) return 'live';
   }
-  // Completed — execution log says completed
-  if (ex && ex.status === 'completed') return 'done';
-  // Partial — execution log says partial
-  if (ex && ex.status === 'partial') return 'partial';
+  // Completed — execution log says completed (skip if reanalyzed)
+  if (ex && !ex.reanalyzed && ex.status === 'completed') return 'done';
+  // Partial — execution log says partial (skip if reanalyzed)
+  if (ex && !ex.reanalyzed && ex.status === 'partial') return 'partial';
   // Planned — in task map with tasks but not executed
   if (plannedIds.has(s.id)) return 'planned';
   // Not planned — in sprint but not in task map
@@ -1547,11 +1565,30 @@ function buildDailyDOM(el, days) {
       group.appendChild(row);
     }
     if (items.length > 12) {
-      const row = cel('div', 'day-item');
-      row.style.opacity = '0.4';
-      row.appendChild(cel('span', 'day-tag tag-task', '+' + (items.length - 12)));
-      row.appendChild(cel('span', 'day-text', 'mere'));
-      group.appendChild(row);
+      const overflow = cel('div', '');
+      overflow.style.display = 'none';
+      for (const i of items.slice(12)) {
+        const r = cel('div', 'day-item');
+        r.appendChild(cel('span', 'day-tag tag-' + i.type, i.type));
+        r.appendChild(cel('span', 'day-text', i.text));
+        overflow.appendChild(r);
+      }
+      const toggle = cel('div', 'day-item');
+      toggle.style.opacity = '0.5';
+      toggle.style.cursor = 'pointer';
+      const extra = items.length - 12;
+      toggle.appendChild(cel('span', 'day-tag tag-task', '+' + extra));
+      const lbl = cel('span', 'day-text', 'Vis alle');
+      toggle.appendChild(lbl);
+      toggle.onclick = function(e) {
+        e.stopPropagation();
+        const show = overflow.style.display === 'none';
+        overflow.style.display = show ? '' : 'none';
+        lbl.textContent = show ? 'Skjul' : 'Vis alle';
+        toggle.querySelector('.day-tag').textContent = show ? '\u25BC' : '+' + extra;
+      };
+      group.appendChild(toggle);
+      group.appendChild(overflow);
     }
     el.appendChild(group);
   }

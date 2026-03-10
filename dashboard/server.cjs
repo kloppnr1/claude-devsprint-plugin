@@ -427,6 +427,17 @@ async function handleRequest(req, res) {
             const aClean = path.join(CWD, '.planning', 'answers', planId + '.json');
             try { if (fs.existsSync(qClean)) fs.unlinkSync(qClean); } catch {}
             try { if (fs.existsSync(aClean)) fs.unlinkSync(aClean); } catch {}
+            // Mark execution-log entry as reanalyzed so story moves back to "Planlagt"
+            const execLogPath = path.join(CWD, '.planning', 'devsprint-execution-log.json');
+            try {
+              const el = JSON.parse(fs.readFileSync(execLogPath, 'utf8'));
+              if (el && el.executions) {
+                for (const e of el.executions) {
+                  if (String(e.storyId) === String(planId)) e.reanalyzed = true;
+                }
+                fs.writeFileSync(execLogPath, JSON.stringify(el, null, 2));
+              }
+            } catch {}
             const { exec: planExec } = require('child_process');
             const planEnv = Object.assign({}, process.env);
             delete planEnv.CLAUDECODE;

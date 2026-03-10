@@ -609,6 +609,81 @@ async function cmdGetSprintItems(cwd, args) {
 }
 
 /**
+ * Handles the get-work-item command.
+ * Fetches a single work item by ID with its children.
+ * stdout: JSON array (same format as get-sprint-items but for a single story + children)
+ * @param {string} cwd - Working directory
+ * @param {string[]} args - CLI args after the command name
+ */
+async function cmdGetWorkItem(cwd, args) {
+  const idArg = args.find(a => /^\d+$/.test(a));
+  if (!idArg) {
+    console.error('Usage: devsprint-tools.cjs get-work-item <id> [--cwd <path>]');
+    process.exit(1);
+  }
+  const workItemId = parseInt(idArg, 10);
+  try {
+    const cfg = loadConfig(cwd);
+    const encodedPat = Buffer.from(':' + cfg.pat).toString('base64');
+
+    // Fetch the work item + children via WIQL
+    const wiqlUrl = `${cfg.org}/${cfg.project}/_apis/wit/wiql?api-version=7.1`;
+    const wiqlBody = {
+      query: `SELECT [System.Id] FROM WorkItemLinks WHERE ([Source].[System.Id] = ${workItemId} OR [Target].[System.Parent] = ${workItemId}) AND [System.Links.LinkType] = 'System.LinkTypes.Hierarchy-Forward' MODE (Recursive)`
+    };
+    const wiqlRes = await makeRequest(wiqlUrl, encodedPat, 'POST', wiqlBody);
+
+    let ids = [workItemId];
+    if (wiqlRes.status === 200) {
+      const wiqlData = JSON.parse(wiqlRes.body);
+      for (const rel of (wiqlData.workItemRelations || [])) {
+        if (rel.target) ids.push(rel.target.id);
+        if (rel.source) ids.push(rel.source.id);
+      }
+      ids = [...new Set(ids)];
+    }
+
+    // Batch fetch full details
+    const batchUrl = `${cfg.org}/${cfg.project}/_apis/wit/workitemsbatch?api-version=7.1`;
+    const batchBody = {
+      ids,
+      fields: [
+        'System.Id', 'System.Title', 'System.WorkItemType', 'System.State',
+        'System.Description', 'Microsoft.VSTS.Common.AcceptanceCriteria',
+        'System.Parent', 'System.AssignedTo', 'System.Tags',
+      ],
+      errorPolicy: 'omit',
+    };
+    const batchRes = await makeRequest(batchUrl, encodedPat, 'POST', batchBody);
+    if (batchRes.status !== 200) {
+      throw new Error(`Failed to fetch work item details: HTTP ${batchRes.status}`);
+    }
+
+    const batchData = JSON.parse(batchRes.body);
+    const items = (batchData.value || []).map((item) => {
+      const assignedTo = item.fields['System.AssignedTo'];
+      return {
+        id: item.id,
+        type: item.fields['System.WorkItemType'],
+        title: item.fields['System.Title'],
+        state: item.fields['System.State'],
+        description: stripHtml(item.fields['System.Description'] || ''),
+        acceptanceCriteria: stripHtml(item.fields['Microsoft.VSTS.Common.AcceptanceCriteria'] || ''),
+        parentId: item.fields['System.Parent'] || null,
+        assignedTo: assignedTo ? assignedTo.displayName : null,
+        tags: item.fields['System.Tags'] ? item.fields['System.Tags'].split('; ') : [],
+      };
+    });
+
+    console.log(JSON.stringify(items));
+    process.exit(0);
+  } catch (err) {
+    console.error(err.message);
+    process.exit(1);
+  }
+}
+
+/**
  * Handles the save-config command.
  * Parses --org, --project, --pat from args, validates, saves config, outputs JSON.
  * @param {string} cwd - Working directory
@@ -2448,6 +2523,10 @@ async function main() {
       await cmdGetSprintItems(cwd, cmdArgs);
       break;
 
+    case 'get-work-item':
+      await cmdGetWorkItem(cwd, cmdArgs);
+      break;
+
     case 'get-branch-links':
       await cmdGetBranchLinks(cwd, cmdArgs);
       break;
@@ -2526,7 +2605,7 @@ async function main() {
 
     default:
       console.error(`Unknown command: ${command}`);
-      console.error('Available commands: save-config, load-config, test, get-sprint, get-sprint-items, get-branch-links, update-description, update-acceptance-criteria, update-state, get-child-states, create-branch, create-pr, find-pr, get-pr, get-pr-threads, show-sprint, list-repos, add-comment, delete-comment, create-work-item, list-teams, get-team-area');
+      console.error('Available commands: save-config, load-config, test, get-sprint, get-sprint-items, get-work-item, get-branch-links, update-description, update-acceptance-criteria, update-state, get-child-states, create-branch, create-pr, find-pr, get-pr, get-pr-threads, show-sprint, list-repos, add-comment, delete-comment, create-work-item, list-teams, get-team-area');
       process.exit(1);
   }
 }

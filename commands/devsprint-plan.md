@@ -47,6 +47,11 @@ devsprint-tools.cjs CLI contracts:
     -> --me: filter to authenticated user's items (parent stories + child tasks)
     -> exit 0 on success, exit 1 on error
 
+  node ~/.claude/bin/devsprint-tools.cjs get-work-item <id> --cwd $CWD
+    -> Fetches a single work item by ID with its children (same output format as get-sprint-items)
+    -> stdout: JSON array [{id, type, title, state, description, acceptanceCriteria, parentId, assignedTo, tags}]
+    -> exit 0 on success, exit 1 on error
+
   node ~/.claude/bin/devsprint-tools.cjs update-description --id <workItemId> --description "<html>" --cwd $CWD
     -> stdout: JSON {"status":"updated","id":N}
     -> Uses PATCH API with application/json-patch+json content type
@@ -160,8 +165,9 @@ Report status to the dashboard at EVERY major step by running:
 If a story is being processed, always include: `--story-id {storyId} --story-title "{storyTitle}"`
 
 Report at these points:
-- Step 2: `--step "Fetching sprint" --detail "Loading sprint metadata"`
-- Step 3: `--step "Loading stories" --detail "Fetching assigned work items"`
+- Step 2 (all-stories mode only): `--step "Fetching sprint" --detail "Loading sprint metadata"`
+- Step 3 (all-stories mode only): `--step "Loading stories" --detail "Fetching assigned work items"`
+- Step 2 (single-story mode): `--step "Loading story" --detail "Fetching #{storyId}"`
 - Step 3.5: `--step "Checking existing" --detail "Checking for previous analysis"`
 - Step 4: `--step "Resolving repo" --detail "Auto-detecting target repo for #{storyId}"`
 - Step 4.5: `--step "Analyzing repo" --detail "Scanning {repoName} for #{storyId}"`
@@ -189,13 +195,23 @@ Report at these points:
 ```
 Without this, the dashboard status will go STALE during parallel agent work. Every agent MUST report status.
 
-**Step 2 — Fetch sprint metadata:**
+**Step 2 — Fetch stories:**
 
+**If `singleStoryMode`:** Skip sprint metadata fetch. Fetch the story directly:
+Run `node ~/.claude/bin/devsprint-tools.cjs get-work-item {targetStoryId} --cwd $CWD`.
+- If exit 1: show error. Stop.
+- If exit 0: parse the JSON array. Find the story item and its child tasks.
+- If the target ID is a Task (not a User Story), use its `parentId` to find the parent story. Process that parent story.
+- If the story's state is "Resolved", "Closed", or "Done": display "Story #{targetStoryId} is already {state}. Nothing to plan." Stop.
+- For `sprintName`, read it from existing `$CWD/.planning/devsprint-task-map.json` if available, otherwise use "unknown".
+- Skip Step 5 (multi-story summary) and go directly to Step 4.
+
+**If NOT `singleStoryMode`:** Fetch the full sprint:
 Run `node ~/.claude/bin/devsprint-tools.cjs get-sprint --cwd $CWD`.
 - If exit 1: show the error message to the user. Stop.
 - If exit 0: parse the JSON. Extract `name` for display.
 
-**Step 3 — Fetch assigned stories:**
+**Step 3 — Fetch assigned stories (skip if `singleStoryMode`):**
 
 Run `node ~/.claude/bin/devsprint-tools.cjs get-sprint-items --me --cwd $CWD`.
 - If exit 1: show the error message to the user. Stop.
@@ -208,14 +224,6 @@ Filter to top-level stories only:
 **Filter out completed stories:**
 - Remove stories where `state` is "Resolved", "Closed", or "Done".
 - If ALL stories are completed, display: "All your stories are already resolved. Nothing to plan." Stop.
-- In `singleStoryMode`: if the target story is completed, display: "Story #{targetStoryId} is already {state}. Nothing to plan." Stop.
-
-**Single-story filtering (if `singleStoryMode`):**
-- Find the item matching `targetStoryId` in the fetched items.
-- If the matching item is a Task (not a User Story), use its `parentId` to find the parent story. Process that parent story only.
-- If the matching item IS a User Story, process it directly.
-- If `targetStoryId` is not found in the sprint items, tell the user: "Story #{targetStoryId} not found in your current sprint items." Stop.
-- After filtering, continue with only this one story — skip Step 5 (multi-story summary) and go directly to Step 4.
 
 **Step 3.5 — Check for existing analysis:**
 
