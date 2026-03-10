@@ -273,43 +273,43 @@
 
   /* ── History runs — pipeline ── */
   .hist-row {
-    display: flex; align-items: center; gap: 0; padding: 4px 0;
+    display: flex; align-items: center; gap: 0; padding: 5px 0;
     border-radius: 5px; transition: background 0.15s;
   }
   .hist-row:hover { background: rgba(0,0,0,0.02); }
   .hist-meta {
-    display: flex; align-items: center; gap: 6px; flex-shrink: 0; width: 130px;
+    display: flex; align-items: center; gap: 6px; flex-shrink: 0; min-width: 128px; margin-right: 8px;
   }
   .hist-ts {
-    font-family: var(--mono); font-size: 9px; color: var(--dim); flex-shrink: 0;
+    font-family: var(--mono); font-size: 10px; color: var(--text2); flex-shrink: 0;
     font-variant-numeric: tabular-nums;
   }
   .hist-type {
-    font-family: var(--mono); font-size: 7px; font-weight: 700; padding: 2px 6px;
-    border-radius: 10px; text-transform: uppercase; letter-spacing: 0.5px; flex-shrink: 0;
-    line-height: 1;
+    font-family: var(--mono); font-size: 8px; font-weight: 700; padding: 2px 7px;
+    border-radius: 10px; text-transform: uppercase; letter-spacing: 0.4px; flex-shrink: 0;
+    line-height: 1.2;
   }
-  .hist-type.ht-plan { background: rgba(6,182,212,0.12); color: #0891b2; border: 1px solid rgba(6,182,212,0.25); }
-  .hist-type.ht-exec { background: rgba(139,92,246,0.12); color: #7c3aed; border: 1px solid rgba(139,92,246,0.25); }
+  .hist-type.ht-plan { background: rgba(6,182,212,0.14); color: #0e7490; border: 1px solid rgba(6,182,212,0.3); }
+  .hist-type.ht-exec { background: rgba(139,92,246,0.14); color: #6d28d9; border: 1px solid rgba(139,92,246,0.3); }
   .hist-pipeline {
     display: flex; align-items: center; flex: 1; overflow-x: auto; overflow-y: hidden;
     scrollbar-width: none; -ms-overflow-style: none;
   }
   .hist-pipeline::-webkit-scrollbar { display: none; }
   .hist-step-pill {
-    font-family: var(--mono); font-size: 7.5px; font-weight: 600; padding: 2px 6px;
+    font-family: var(--mono); font-size: 8px; font-weight: 600; padding: 3px 7px;
     text-transform: uppercase; letter-spacing: 0.2px; flex-shrink: 0;
     white-space: nowrap; line-height: 1.2; border-radius: 3px;
   }
-  .hist-step-pill.hp-prev { opacity: 0.55; }
-  .hist-step-pill.hp-current { font-size: 8px; padding: 3px 8px; font-weight: 700; }
-  .hist-conn { width: 6px; height: 1px; flex-shrink: 0; background: var(--border); }
+  .hist-step-pill.hp-prev { opacity: 0.6; }
+  .hist-step-pill.hp-current { font-size: 9px; padding: 3px 9px; font-weight: 700; }
+  .hist-conn { width: 6px; height: 1.5px; flex-shrink: 0; background: var(--border); }
   .hist-conn.hc-done { opacity: 0.3; }
   .hist-view-btn {
-    font-family: var(--mono); font-size: 7px; font-weight: 600; padding: 2px 8px;
+    font-family: var(--mono); font-size: 8px; font-weight: 600; padding: 3px 10px;
     border-radius: 3px; border: 1px solid var(--border); background: var(--white);
-    color: var(--dim); cursor: pointer; text-transform: uppercase; letter-spacing: 0.3px;
-    flex-shrink: 0; margin-left: 8px; transition: all 0.15s;
+    color: var(--text2); cursor: pointer; text-transform: uppercase; letter-spacing: 0.3px;
+    flex-shrink: 0; margin-left: 10px; transition: all 0.15s;
   }
   .hist-view-btn:hover { border-color: var(--indigo); color: var(--indigo); background: rgba(67,56,202,0.04); }
   /* Active run */
@@ -317,15 +317,15 @@
     background: rgba(67,56,202,0.05); border: 1px solid rgba(67,56,202,0.18);
     border-radius: 6px; padding: 8px 12px;
   }
-  .hist-row.hist-live .hist-meta { width: auto; }
-  .hist-row.hist-live .hist-ts { color: var(--indigo); font-weight: 600; font-size: 10px; }
-  .hist-row.hist-live .hist-step-pill { font-size: 8.5px; padding: 3px 8px; }
-  .hist-row.hist-live .hist-step-pill.hp-prev { opacity: 0.6; }
+  .hist-row.hist-live .hist-meta { min-width: auto; }
+  .hist-row.hist-live .hist-ts { color: var(--indigo); font-weight: 600; font-size: 11px; }
+  .hist-row.hist-live .hist-step-pill { font-size: 9px; padding: 3px 9px; }
+  .hist-row.hist-live .hist-step-pill.hp-prev { opacity: 0.65; }
   .hist-row.hist-live .hist-conn { width: 8px; }
   @keyframes livePill { 0%,100%{ opacity:1; } 50%{ opacity:0.45; } }
   .hist-row.hist-live .hist-step-pill.hp-current { animation: livePill 2s ease-in-out infinite; }
   .hist-more {
-    font-family: var(--mono); font-size: 9px; color: var(--indigo);
+    font-family: var(--mono); font-size: 10px; color: var(--indigo);
     cursor: pointer; padding: 4px 0; user-select: none; letter-spacing: 0.3px;
   }
   .hist-more:hover { text-decoration: underline; }
