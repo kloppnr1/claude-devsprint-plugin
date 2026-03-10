@@ -793,7 +793,7 @@ function renderMarkdown(md) {
   return html;
 }
 
-function openSpecPanel(storyId, title) {
+function openSpecPanel(storyId, title, readOnly) {
   const overlay = cel('div', 'spec-overlay');
   const panel = cel('div', 'spec-panel');
 
@@ -811,16 +811,19 @@ function openSpecPanel(storyId, title) {
   const footer = cel('div', 'spec-footer');
   const cancelBtn = cel('button', 'btn-cancel', 'Luk');
   cancelBtn.onclick = function() { overlay.remove(); };
-  const launchBtn = cel('button', 'btn-launch', '\u25B6 Start execution');
-  launchBtn.disabled = true;
-  launchBtn.onclick = function() {
-    launchBtn.disabled = true; launchBtn.textContent = 'Starter\u2026';
-    fetch('/api/execute', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({storyId: storyId}) })
-      .then(r => r.json()).then(() => { launchBtn.textContent = 'Startet \u2713'; setTimeout(() => overlay.remove(), 1000); })
-      .catch(() => { launchBtn.disabled = false; launchBtn.textContent = '\u25B6 Start execution'; });
-  };
   footer.appendChild(cancelBtn);
-  footer.appendChild(launchBtn);
+  if (!readOnly) {
+    const launchBtn = cel('button', 'btn-launch', '\u25B6 Start execution');
+    launchBtn.disabled = true;
+    launchBtn.onclick = function() {
+      launchBtn.disabled = true; launchBtn.textContent = 'Starter\u2026';
+      fetch('/api/execute', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({storyId: storyId}) })
+        .then(r => r.json()).then(() => { launchBtn.textContent = 'Startet \u2713'; setTimeout(() => overlay.remove(), 1000); })
+        .catch(() => { launchBtn.disabled = false; launchBtn.textContent = '\u25B6 Start execution'; });
+    };
+    footer.appendChild(launchBtn);
+    body._launchBtn = launchBtn;
+  }
   panel.appendChild(footer);
 
   overlay.appendChild(panel);
@@ -829,7 +832,7 @@ function openSpecPanel(storyId, title) {
 
   fetch('/api/story-spec?id=' + storyId)
     .then(r => { if (!r.ok) throw new Error('Not found'); return r.json(); })
-    .then(d => { body.innerHTML = renderMarkdown(d.markdown); launchBtn.disabled = false; })
+    .then(d => { body.innerHTML = renderMarkdown(d.markdown); if (body._launchBtn) body._launchBtn.disabled = false; })
     .catch(() => { body.textContent = 'Ingen plan fundet. K\u00f8r /devsprint-plan ' + storyId + ' f\u00f8rst.'; });
 }
 
@@ -1005,7 +1008,7 @@ function buildHistRow(h, forStoryId) {
   // "Vis plan" button for plan runs
   if (forStoryId && isPlan) {
     var viewBtn = cel('button', 'hist-view-btn', 'Vis plan');
-    viewBtn.onclick = function(e) { e.stopPropagation(); openSpecPanel(forStoryId, ''); };
+    viewBtn.onclick = function(e) { e.stopPropagation(); openSpecPanel(forStoryId, '', true); };
     r.appendChild(viewBtn);
   }
   return r;
