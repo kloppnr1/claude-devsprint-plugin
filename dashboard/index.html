@@ -697,6 +697,8 @@ function cel(tag, cls, txt) {
   if (txt != null) e.textContent = String(txt);
   return e;
 }
+function clr(el) { while (el.firstChild) el.removeChild(el.firstChild); }
+function setStoryText(el, id, title) { clr(el); el.appendChild(cel('span', 'id', '#' + id)); el.appendChild(document.createTextNode(title || '')); }
 function escH(s) {
   const d = document.createElement('div');
   d.textContent = s;
@@ -786,7 +788,7 @@ function renderAgent(d) {
     label.textContent = 'DONE';
     story.style.color = '';
     if (a.storyId) {
-      story.innerHTML = `<span class="id">#${a.storyId}</span>${E(a.storyTitle)}`;
+      setStoryText(story, a.storyId, a.storyTitle);
     } else {
       story.textContent = a.detail || a.step || '...';
     }
@@ -795,10 +797,10 @@ function renderAgent(d) {
     step.textContent = a.detail || a.step || '';
     step.className = 'ab-step st-done';
     desc.textContent = '';
-    prog.innerHTML = '';
+    clr(prog);
     const storiesEl = document.getElementById('ab-stories');
     storiesEl.style.display = 'none';
-    storiesEl.innerHTML = '';
+    clr(storiesEl);
     return;
   }
 
@@ -808,7 +810,7 @@ function renderAgent(d) {
   label.textContent = 'ACTIVE';
   story.style.color = '';
   if (a.storyId) {
-    story.innerHTML = `<span class="id">#${a.storyId}</span>${E(a.storyTitle)}`;
+    setStoryText(story, a.storyId, a.storyTitle);
   } else {
     story.textContent = a.detail || a.step || '...';
   }
@@ -824,7 +826,7 @@ function renderAgent(d) {
   const storyKeys = Object.keys(storyMap);
   if (storyKeys.length > 1) {
     // Multiple stories being tracked — show each as a row
-    storiesEl.innerHTML = '';
+    clr(storiesEl);
     story.textContent = storyKeys.length + ' stories';
     step.textContent = '';
     desc.textContent = '';
@@ -840,10 +842,11 @@ function renderAgent(d) {
     storiesEl.style.display = '';
   } else {
     storiesEl.style.display = 'none';
-    storiesEl.innerHTML = '';
+    clr(storiesEl);
   }
 
-  prog.innerHTML = '<div class="ab-ind"></div>';
+  clr(prog);
+  prog.appendChild(cel('div', 'ab-ind'));
 }
 
 /* ── DOM State ── */
@@ -1648,7 +1651,7 @@ function updateStoryAgent(d) {
     if (ss || (a && a.storyId === sid)) {
       el.style.display = '';
       // Build a live run row reusing buildHistRow
-      content.innerHTML = '';
+      clr(content);
       var liveData = { startedAt: ss && ss.startedAt ? ss.startedAt : a.startedAt, step: ss ? ss.step : a.step, stepLog: ss && ss.stepLog ? ss.stepLog : (a.stepLog || []), command: ss && ss.command ? ss.command : (a.command || null) };
       var liveRow = buildHistRow(liveData, sid, true);
       liveRow.classList.add('hist-live');
