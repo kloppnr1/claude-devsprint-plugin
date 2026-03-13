@@ -1,106 +1,169 @@
 ---
 name: devsprint-setup
-description: Configure Azure DevOps connection credentials
-argument-hint: ""
+description: Configure provider (GitHub or Azure DevOps) with MCP server
+argument-hint: "[github|azdo]"
 allowed-tools:
   - Read
   - Write
   - Bash
   - Glob
   - AskUserQuestion
+  - mcp__azure-devops__ado_core_list_projects
+  - mcp__azure-devops__ado_core_list_project_teams
+  - mcp__azure-devops__ado_work_get_team_settings
+  - mcp__github__get_me
 ---
 
 <objective>
-Ensure the Azure DevOps MCP server is registered in `.mcp.json` for this project. The MCP server uses OAuth (browser login) — no PAT needed for Claude commands.
+Configure which provider to use (GitHub or Azure DevOps). Register the appropriate MCP server in `.mcp.json`. Both providers use OAuth (browser login) — no PAT needed.
 
-Optionally configure `.planning/devsprint-config.json` with team/area defaults and a PAT for the dashboard server (which can't use MCP).
+Store provider config in `.planning/devsprint-config.json` with provider-specific settings (org, project, team, area for azdo; owner, repo, assignee for github).
 
-On re-run with existing config, show current values and let user choose to update or keep.
+On re-run: show current config and let user update or keep.
 </objective>
 
 <execution_context>
-MCP config: .mcp.json (in repo root or ~/.claude/.mcp.json)
-Dashboard config: .planning/devsprint-config.json (optional — only needed for dashboard)
+MCP config: .mcp.json (in repo root)
+Provider config: .planning/devsprint-config.json
 </execution_context>
 
+<provider_config>
+The config file stores both providers side-by-side. Switching only changes the `provider` field:
+```json
+{
+  "provider": "github",
+  "github": { "owner": "...", "repo": "...", "assignee": "..." },
+  "azdo": { "org": "...", "project": "...", "team": "...", "area": "...", "assignee": "..." }
+}
+```
+</provider_config>
+
 <process>
-1. **Check MCP server registration:**
-   Check if `.mcp.json` exists in the project root (or `$CWD/.mcp.json`).
-   - Read the file and check if it contains an `"azure-devops"` entry under `mcpServers`.
-   - If present: display "MCP server already registered: azure-devops (verdo365)". Continue to step 2.
-   - If missing or no azure-devops entry: create/update `.mcp.json`:
-     ```json
-     {
-       "mcpServers": {
-         "azure-devops": {
-           "command": "npx",
-           "args": ["-y", "@azure-devops/mcp", "verdo365"]
-         }
+**Determine provider from argument:**
+- If argument is `github` or `azdo`: use that provider.
+- If no argument: use `AskUserQuestion` to ask "Which provider?" with options `["GitHub", "Azure DevOps"]`.
+
+---
+
+## GitHub setup
+
+1. **Register MCP server:**
+   Read `.mcp.json`. If no `"github"` entry exists, add it:
+   ```json
+   {
+     "mcpServers": {
+       "github": {
+         "type": "url",
+         "url": "https://api.githubcopilot.com/mcp/"
        }
      }
-     ```
-     Display: "Registered Azure DevOps MCP server for org 'verdo365'."
-     Display: "On first use, a browser window will open for OAuth login."
+   }
+   ```
+   Preserve any existing entries (e.g., azure-devops).
 
-2. **Verify MCP connection:**
-   Test the MCP connection by calling `mcp__azure-devops__ado_core_list_projects` (or equivalent project list tool).
-   - If it works: display "MCP connection verified — connected to verdo365."
-   - If it fails (tool not available): display "MCP server registered but not yet connected. Restart Claude Code to activate, then a browser login will be triggered on first use."
+2. **Verify connection:**
+   Call `mcp__github__get_me` to verify OAuth works.
+   - Success: display "Connected as {login}".
+   - Failure: display "GitHub MCP not connected. Restart Claude Code — a browser login will be triggered on first use."
 
-3. **Check for existing dashboard config:**
-   Check if `.planning/devsprint-config.json` exists.
-   - If it exists: read it and display:
-     ```
-     Dashboard config (for standalone dashboard server):
-       Org:     {org}
-       Project: {project}
-       Team:    {team || "(not set)"}
-       Area:    {area || "(not set)"}
-       PAT:     {masked — first 4 + "..." + last 4}
-     ```
-   - Use `AskUserQuestion` to ask: "Update dashboard config or keep current?"
-   - If "keep": skip to step 6.
-   - If "update": continue to step 4.
-   - If no config exists: use `AskUserQuestion` to ask: "Set up dashboard config? (Only needed if you use the web dashboard)"
-     - If "no": display "Skipped dashboard config. MCP setup complete." Stop.
-     - If "yes": continue to step 4.
-
-4. **Configure dashboard credentials:**
-   The dashboard server runs as standalone Node.js and needs a PAT for Azure DevOps API access.
+3. **Configure provider settings:**
+   Read existing `.planning/devsprint-config.json` if it exists.
+   - If `github` section already exists: show current values, ask "Update or keep?"
+   - If "keep": skip to step 5.
 
    Use `AskUserQuestion` to prompt for:
-   - Organization URL or name (e.g., 'verdo365')
-   - Project name
-   - Personal Access Token (PAT) with scopes: vso.project + vso.work + vso.code
+   - GitHub owner (user or org, e.g., `kloppnr1`)
+   - Repository name (e.g., `claude-devsprint-plugin`)
+   - Assignee (GitHub username for filtering, e.g., `kloppnr1`)
 
-5. **Auto-detect team and area:**
-   Use MCP tools to detect team and area:
-   - Call `mcp__azure-devops__ado_core_list_project_teams` with the project name to get teams.
-   - Present team options via `AskUserQuestion`.
-   - Call `mcp__azure-devops__ado_work_get_team_settings` with the selected team to get the default area path.
-   - Display: "Auto-detected area: {area}"
+4. **Save config:**
+   Write `.planning/devsprint-config.json` with `provider: "github"` and the github section.
+   Preserve any existing `azdo` section.
 
-   **Save dashboard config:**
-   Write `.planning/devsprint-config.json` with org, project, base64-encoded PAT, team, and area.
-
-   Verify `.planning/devsprint-config.json` is covered by `.gitignore`:
-   - Read the root `.gitignore` file.
-   - If `devsprint-config.json` is not covered: add it to `.gitignore`.
+5. **Verify `.gitignore`:**
+   Check `.gitignore` covers `devsprint-config.json`. Add if missing.
 
 6. **Summary:**
    ```
    Setup complete:
-     MCP server: azure-devops (verdo365) — OAuth
-     Dashboard:  {configured / not configured}
+     Provider: GitHub
+     MCP: github (OAuth)
+     Owner: {owner}
+     Repo: {repo}
+     Assignee: {assignee}
+   ```
 
-   Claude commands use MCP (OAuth). Dashboard uses PAT from .planning/devsprint-config.json.
+---
+
+## Azure DevOps setup
+
+1. **Register MCP server:**
+   Read `.mcp.json`. If no `"azure-devops"` entry exists, ask for org name via `AskUserQuestion`:
+   "Azure DevOps organisation name (e.g., 'verdo365'):"
+
+   Add to `.mcp.json`:
+   ```json
+   {
+     "mcpServers": {
+       "azure-devops": {
+         "command": "npx",
+         "args": ["-y", "@azure-devops/mcp", "<orgName>"]
+       }
+     }
+   }
+   ```
+   Preserve any existing entries (e.g., github).
+   Display: "On first use, a browser window will open for OAuth login."
+
+2. **Verify connection:**
+   Call `mcp__azure-devops__ado_core_list_projects` to verify OAuth works.
+   - Success: display "Connected to {orgName}."
+   - Failure: display "Azure DevOps MCP not connected. Restart Claude Code — a browser login will be triggered on first use."
+
+3. **Configure provider settings:**
+   Read existing `.planning/devsprint-config.json` if it exists.
+   - If `azdo` section already exists: show current values, ask "Update or keep?"
+   - If "keep": skip to step 6.
+
+   Use `AskUserQuestion` to prompt for:
+   - Project name (e.g., "Verdo Agile Development")
+   - Assignee name (e.g., "Martin Klopp Jensen")
+
+4. **Auto-detect team:**
+   Call `mcp__azure-devops__ado_core_list_project_teams` with the project name.
+   - Success: present team names via `AskUserQuestion`: "Which team?"
+   - Failure: warn "Could not list teams." Skip team/area.
+
+5. **Auto-detect area:**
+   If team was selected:
+   Call `mcp__azure-devops__ado_work_get_team_settings` with team name.
+   - Success: extract default area path. Display "Auto-detected area: {area}"
+   - Failure: warn "Could not resolve area."
+
+   **Save config:**
+   Write `.planning/devsprint-config.json` with `provider: "azdo"` and the azdo section (org, project, team, area, assignee).
+   Preserve any existing `github` section.
+
+6. **Verify `.gitignore`:**
+   Check `.gitignore` covers `devsprint-config.json`. Add if missing.
+
+7. **Summary:**
+   ```
+   Setup complete:
+     Provider: Azure DevOps
+     MCP: azure-devops ({orgName}) — OAuth
+     Project: {project}
+     Team: {team}
+     Area: {area}
+     Assignee: {assignee}
    ```
 </process>
 
 <success_criteria>
-- `.mcp.json` contains azure-devops MCP server entry
+- `.mcp.json` contains the correct MCP server entry for the chosen provider
+- `.planning/devsprint-config.json` has provider field and provider-specific settings
+- Both provider configs preserved side-by-side (switching doesn't delete the other)
+- No PAT required — both providers use OAuth via MCP
 - MCP connection tested (or user informed to restart)
-- Dashboard config optionally set up with PAT for standalone server
-- PAT never echoed back in plain text
-- `.gitignore` covers `devsprint-config.json` if dashboard config exists
+- `.gitignore` covers `devsprint-config.json`
 </success_criteria>
