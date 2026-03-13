@@ -232,9 +232,45 @@ Run `node ~/.claude/bin/devsprint-tools.cjs get-work-item {targetItemId} --cwd $
 - If exit 1: show error. Stop.
 - If exit 0: parse the JSON array. Find the target item.
 
+**If the target item is a User Story:** also fetch child tasks via sprint items:
+Run `node ~/.claude/bin/devsprint-tools.cjs get-sprint-items --me --cwd $CWD`.
+Filter for items where `parentId === targetItemId` — these are the child tasks. `get-work-item` may not return children, so this is the reliable way to find them.
+
 **Determine item type and planning scope:**
 
-1. If the target item's `type === "User Story"`: set `planningScope = "story"`, `targetStoryId = targetItemId`. Find child tasks from the response. Continue as story planning.
+1. If the target item's `type === "User Story"`: Find child tasks from the sprint items response (filtered by `parentId === targetItemId`).
+
+   Filter child tasks to only those in **New** or **Active** state (exclude Resolved, Closed, Done). Call these `plannable tasks`.
+
+   **If plannable tasks count > 1:**
+
+   **If `headless = true`:** Write a question using the headless protocol asking the user to choose scope:
+   ```json
+   {
+     "storyId": {targetItemId},
+     "storyTitle": "{story title}",
+     "timestamp": "{ISO timestamp}",
+     "questions": [
+       {
+         "id": "scope",
+         "text": "#{targetItemId} har {N} tasks. Vil du planlægge hele storyen eller kun én bestemt task?",
+         "type": "choice",
+         "options": ["Hele storyen", {for each plannable task: "Task #{task.id} — {task.title}"}]
+       }
+     ]
+   }
+   ```
+   Poll for answers. Then:
+   - If answer is "Hele storyen": set `planningScope = "story"`, `targetStoryId = targetItemId`.
+   - If answer is a specific task: set `planningScope = "task"`, `targetTaskId = {selected task ID}`, `targetStoryId = targetItemId`. The parent story context is already fetched.
+
+   **If `headless = false`:** Ask the user:
+   - Question: "#{targetItemId} har {N} tasks. Vil du planlægge hele storyen eller kun én bestemt task?"
+   - Options: "Hele storyen" / one option per plannable task: "Task #{task.id} — {task.title}"
+   - If "Hele storyen": set `planningScope = "story"`, `targetStoryId = targetItemId`.
+   - If a specific task is selected: set `planningScope = "task"`, `targetTaskId = {selected task ID}`, `targetStoryId = targetItemId`.
+
+   **If plannable tasks count is 0 or 1:** set `planningScope = "story"`, `targetStoryId = targetItemId`. No question needed.
 
 2. If the target item's `type === "Task"`: the user passed a task ID. Determine what to plan:
 

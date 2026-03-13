@@ -331,11 +331,22 @@ The daily overview shows a chronological feed of all sprint activity:
 
 ### Start the dashboard
 
+After installing the plugin and running `/devsprint-setup` in your project:
+
 ```bash
+# From the plugin directory
 node dashboard/server.cjs --cwd /path/to/your/project
 ```
 
-Opens at `http://localhost:3000`. The `--cwd` must point to the project directory that contains `.planning/`.
+That's it. Open `http://localhost:3000` in your browser.
+
+`--cwd` is the project directory where you ran `/devsprint-setup` (the one with `.planning/`). Example:
+
+```bash
+node dashboard/server.cjs --cwd ~/source/repos/MyApp
+```
+
+The dashboard starts immediately — no build step, no dependencies, no config. It reads `.planning/` files and queries Azure DevOps using the credentials from `/devsprint-setup`.
 
 ### Features
 
@@ -352,6 +363,27 @@ Opens at `http://localhost:3000`. The `--cwd` must point to the project director
 - **PR status** — badges show active/merged/rejected, with a "Fix PR" button for active PRs
 - **One-click actions** — Plan, Execute, Re-analyze, Fix PR, and Approve directly from the dashboard
 - **Auto-refresh** — polls every 5 seconds for agent status, 60 seconds for full data refresh
+
+### Task-level planning from the dashboard
+
+When you click **Analyze** on a story that has multiple tasks in New or Active state, the agent asks which scope you want — directly in the dashboard:
+
+1. Click **Analyze** (or **Re-analyze**) on a story
+2. The agent loads the story and discovers its tasks
+3. A question panel appears inline under the story's agent section asking for your scope choice
+4. Pick **Whole story** to plan everything, or select a specific task
+5. Click **Submit** — the agent continues with your choice
+
+![Task scope question in dashboard](dashboard/screenshots/dashboard-task-scope-full.png)
+
+If you select a single task, the agent generates a focused TASK.md spec covering only that task. You can then click **Execute** to implement just that task — it creates a feature branch, makes the changes described in the task spec, runs tests, creates a PR, and resolves the task in Azure DevOps. Other tasks on the story are left untouched.
+
+This is useful when:
+- A story is partially done and only one task remains
+- You want to ship a small task (e.g., documentation) without re-planning the whole story
+- A new task was added to an already-completed story (post-merge fix)
+
+The question panel uses file-based communication (`.planning/questions/` and `.planning/answers/`) between the headless agent and the dashboard. Questions appear automatically when the agent needs input — no manual polling or page refresh required.
 
 ### How it works
 
@@ -391,9 +423,17 @@ Examples:
 - `/devsprint-create Add CSV export: 1) Backend endpoint 2) Frontend button 3) Tests` — creates a story with 3 tasks
 - `/devsprint-create Add tasks to #1205: write tests, update docs` — creates tasks under an existing story
 
-### `/devsprint-plan [story-id]`
+### `/devsprint-plan [story-id | task-id]`
 
-The main analysis pipeline. Run without arguments to plan all assigned stories, or pass a story ID to plan a single story (e.g., `/devsprint-plan 1205`). Already resolved stories are automatically skipped. Previously analyzed stories are skipped unless `--reanalyze` is passed.
+The main analysis pipeline. Run without arguments to plan all assigned stories, or pass an ID to plan a single item:
+
+- `/devsprint-plan` — plan all assigned stories
+- `/devsprint-plan 1205` — plan story #1205
+- `/devsprint-plan 1207` — plan task #1207 (auto-detects it's a task, asks whether to plan the task or its parent story)
+
+**Task-level planning:** When you pass a story ID that has multiple tasks in New/Active state, you're asked whether to plan the whole story or a single task. Selecting a task generates a focused TASK.md spec (lighter than STORY.md) with parent story context. This is useful when a story is partially done and you only need to implement one remaining task.
+
+Already resolved stories are automatically skipped. Previously analyzed stories are skipped unless `--reanalyze` is passed.
 
 **What it does, step by step:**
 
@@ -417,6 +457,7 @@ The main analysis pipeline. Run without arguments to plan all assigned stories, 
 Execute story plans. Two modes depending on arguments:
 
 - **`/devsprint-execute 1205`** — single story. Creates a feature branch, implements the story spec, resolves tasks, creates a PR. Mostly autonomous — only asks for input on items explicitly marked as blocking in the spec.
+- **`/devsprint-execute 1207`** — single task. If a TASK.md spec exists for this ID, only that task is implemented. The parent story provides context but other tasks are untouched.
 - **`/devsprint-execute`** — all stories, fully autonomous. Loops through every story in the task map without user interaction. Errors on one story don't block the next. Outputs a full summary with all PR links at the end.
 
 PRs are created via the Azure DevOps REST API and automatically linked to the story via `workItemRefs`.

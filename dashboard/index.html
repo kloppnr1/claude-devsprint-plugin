@@ -1065,6 +1065,51 @@ function showQuestions(body, footer, storyId, qData, onAnswered) {
   footer.appendChild(submitBtn);
 }
 
+/* ── Auto-poll questions for active stories ── */
+var _shownQuestions = {};  // track which storyId has questions displayed (avoid re-fetch)
+var _answeredQuestions = {};  // track answered stories to suppress re-showing
+
+function pollStoryQuestions(storyId, contentEl) {
+  // Don't re-fetch if already answered
+  if (_answeredQuestions[storyId]) return;
+  // If we have a cached panel, check if it's still in THIS contentEl
+  if (_shownQuestions[storyId]) {
+    var existing = _shownQuestions[storyId];
+    if (contentEl.contains(existing)) return;  // already visible in correct parent
+    // Panel exists but is orphaned (DOM was rebuilt) — re-attach it
+    contentEl.appendChild(existing);
+    return;
+  }
+  // Fetch questions from server
+  F('/api/questions/' + storyId).then(function(qData) {
+    if (!qData || !qData.questions || !qData.questions.length) return;
+    // Don't double-add
+    if (_shownQuestions[storyId]) return;
+    // Build question panel
+    var panel = cel('div', 'q-panel');
+    panel.style.cssText = 'margin-top:10px;padding:12px;background:var(--surface);border:1px solid var(--cyan);border-radius:8px;';
+    var title = cel('div', '', 'Agent venter på dit svar:');
+    title.style.cssText = 'font-size:12px;font-weight:600;color:var(--cyan);margin-bottom:8px;font-family:var(--mono);';
+    panel.appendChild(title);
+    var qBody = cel('div', 'q-body');
+    var qFooter = cel('div', 'q-footer');
+    panel.appendChild(qBody);
+    panel.appendChild(qFooter);
+    showQuestions(qBody, qFooter, storyId, qData, function() {
+      _answeredQuestions[storyId] = true;
+      delete _shownQuestions[storyId];
+      // Replace panel with confirmation
+      clr(panel);
+      var done = cel('div', '');
+      done.style.cssText = 'padding:8px;text-align:center;color:var(--green);font-family:var(--mono);font-size:12px;';
+      done.textContent = 'Svar sendt — agent fortsætter...';
+      panel.appendChild(done);
+    });
+    _shownQuestions[storyId] = panel;
+    contentEl.appendChild(panel);
+  }).catch(function() { /* no questions yet — ignore */ });
+}
+
 /* ── Toggle helpers ── */
 function togDetail(el) {
   const d = el.nextElementSibling;
@@ -1656,11 +1701,16 @@ function updateStoryAgent(d) {
       var liveRow = buildHistRow(liveData, sid, true);
       liveRow.classList.add('hist-live');
       content.appendChild(liveRow);
+      // Poll for questions when agent is waiting
+      pollStoryQuestions(sid, content);
       // Auto-expand detail panel for active stories
       var detail = document.querySelector('[data-story-detail="' + sid + '"]');
       if (detail && detail.style.display === 'none') detail.style.display = 'block';
     } else {
       el.style.display = 'none';
+      // Clean up question state when story is no longer active
+      if (_shownQuestions[sid]) delete _shownQuestions[sid];
+      if (_answeredQuestions[sid]) delete _answeredQuestions[sid];
     }
   });
 }
@@ -1771,8 +1821,23 @@ setInterval(() => F('/api/agent-status').then(d => {
   if (_wasActive && !isActive) refreshAll();
   _wasActive = isActive;
   S.agent = d; renderAgent(d); updateStoryAgent(d);
+  // Poll for questions on active stories (independent of status change)
+  if (d && d.active) {
+    var stMap = d.active.stories || {};
+    var pollIds = Object.keys(stMap).map(Number);
+    if (!pollIds.length && d.active.storyId) pollIds = [d.active.storyId];
+    pollIds.forEach(function(sid) {
+      var el = document.querySelector('[data-story-agent="' + sid + '"] .agent-content');
+      if (el) pollStoryQuestions(sid, el);
+    });
+  }
   // Re-render board when agent status changes (story grouping + history)
-  if (changed && _dom.built) renderMain();
+  if (changed && _dom.built) {
+    renderMain();
+    // renderMain() rebuilds DOM — force updateStoryAgent to re-run on new elements
+    _lastStoryAgentKey = '';
+    updateStoryAgent(d);
+  }
   // Light-weight task-map poll — catches PLAN completion even if clear-status was missed
   if (changed) F('/api/task-map').then(function(tm) {
     var k = JSON.stringify(tm);
