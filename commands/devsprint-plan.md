@@ -7,6 +7,14 @@ allowed-tools:
   - Write
   - Bash
   - AskUserQuestion
+  - mcp__azure-devops__ado_work_list_team_iterations
+  - mcp__azure-devops__ado_wit_my_work_items
+  - mcp__azure-devops__ado_wit_get_work_items_for_iteration
+  - mcp__azure-devops__ado_wit_get_work_item
+  - mcp__azure-devops__ado_wit_update_work_item
+  - mcp__azure-devops__ado_wit_add_work_item_comment
+  - mcp__azure-devops__ado_wit_update_work_item_comment
+  - mcp__azure-devops__ado_repo_list_repos_by_project
 ---
 
 <feedback_rule>
@@ -25,68 +33,57 @@ If a story ID is provided as argument, only process that single story (skip mult
 </objective>
 
 <execution_context>
-Helper: ~/.claude/bin/devsprint-tools.cjs
-Config file: .planning/devsprint-config.json
+Azure DevOps access: via MCP server (@azure-devops/mcp) — tools prefixed with `mcp__azure-devops__ado_`.
+Local helpers (file I/O only): ~/.claude/bin/devsprint-tools.cjs — used for parse-file, report-status, clear-status.
 $CWD is the project directory where .planning/ lives.
 </execution_context>
 
 <context>
-devsprint-tools.cjs CLI contracts:
+MCP tool reference (Azure DevOps operations):
 
-  node ~/.claude/bin/devsprint-tools.cjs load-config --cwd $CWD
-    -> stdout: JSON {"org":"...","project":"...","pat":"<raw-decoded>"}
-    -> exit 0 on success, exit 1 if no config
+  mcp__azure-devops__ado_work_list_team_iterations
+    -> Lists team iterations. Use with project "Verdo Agile Development" and timeframe "current" to get the current sprint.
+    -> Returns iteration details: id, name, path, startDate, finishDate.
 
-  node ~/.claude/bin/devsprint-tools.cjs get-sprint --cwd $CWD
-    -> stdout: JSON {"iterationId":"...","name":"...","path":"...","startDate":"...","finishDate":"..."}
-    -> exit 0 on success, exit 1 on error
+  mcp__azure-devops__ado_wit_my_work_items
+    -> Returns work items assigned to the authenticated user.
+    -> Equivalent to the old get-sprint-items --me. Returns items with id, type, title, state, description, acceptanceCriteria, parentId, assignedTo, tags.
 
-  node ~/.claude/bin/devsprint-tools.cjs get-sprint-items --me --cwd $CWD
-    -> stdout: JSON array [{id, type, title, state, description, acceptanceCriteria, parentId, assignedTo, tags}]
-    -> tags: array of strings (e.g., ["research", "blocked"])
-    -> --me: filter to authenticated user's items (parent stories + child tasks)
-    -> exit 0 on success, exit 1 on error
+  mcp__azure-devops__ado_wit_get_work_items_for_iteration
+    -> Returns ALL work items in a specific sprint iteration (not just assigned to you).
+    -> Use to get the full iteration picture when needed.
 
-  node ~/.claude/bin/devsprint-tools.cjs get-work-item <id> --cwd $CWD
-    -> Fetches a single work item by ID with its children (same output format as get-sprint-items)
-    -> stdout: JSON array [{id, type, title, state, description, acceptanceCriteria, parentId, assignedTo, tags, attachments?}]
-    -> The primary work item may include an "attachments" array: [{name, url, size}]
-    -> exit 0 on success, exit 1 on error
+  mcp__azure-devops__ado_wit_get_work_item
+    -> Fetches a single work item by ID. Use expand=Relations to get child work item links and attachments.
+    -> Returns: id, type, title, state, description, acceptanceCriteria, assignedTo, tags, relations (including child links and attachment URLs).
+    -> To get children: extract child IDs from relations (where rel === "System.LinkTypes.Hierarchy-Forward"), then batch-fetch them.
 
-  node ~/.claude/bin/devsprint-tools.cjs download-attachment --url <attachment-url> --output <local-path> --cwd $CWD
-    -> Downloads an attachment from Azure DevOps to a local file (requires auth)
-    -> stdout: JSON {"status":"ok","path":"...","name":"...","size":N}
-    -> exit 0 on success, exit 1 on error
+  mcp__azure-devops__ado_wit_update_work_item
+    -> Updates a work item's fields (description, acceptance criteria, state, etc.).
+    -> Use for both update-description and update-acceptance-criteria operations.
+
+  mcp__azure-devops__ado_wit_add_work_item_comment
+    -> Adds a comment (Discussion) to a work item. Text accepts HTML for rich formatting.
+
+  mcp__azure-devops__ado_wit_update_work_item_comment
+    -> Updates or deletes a comment on a work item.
+
+  mcp__azure-devops__ado_repo_list_repos_by_project
+    -> Lists Git repositories in the Azure DevOps project.
+    -> Returns: name, id, remoteUrl, etc.
+
+Local CLI helpers (kept — local file I/O only):
 
   node ~/.claude/bin/devsprint-tools.cjs parse-file --file <path> --cwd $CWD
     -> Extracts text from binary files (.msg, .eml, .docx, or plain text fallback)
     -> stdout: JSON {"status":"ok","type":"msg|eml|docx|text","subject":"...","from":"...","to":"...","date":"...","body":"..."}
     -> exit 0 on success, exit 1 on error
 
-  node ~/.claude/bin/devsprint-tools.cjs update-description --id <workItemId> --description "<html>" --cwd $CWD
-    -> stdout: JSON {"status":"updated","id":N}
-    -> Uses PATCH API with application/json-patch+json content type
-    -> exit 0 on success, exit 1 on error
+  node ~/.claude/bin/devsprint-tools.cjs report-status --command plan --step "{step}" --detail "{detail}" --cwd $CWD
+    -> Reports dashboard status. Add --story-id and --story-title when processing a specific story.
 
-  node ~/.claude/bin/devsprint-tools.cjs list-repos --cwd $CWD
-    -> stdout: JSON array [{"name":"...","id":"...","remoteUrl":"...","lastPushDate":"..."}]
-    -> Lists Git repositories in the Azure DevOps project
-    -> exit 0 on success, exit 1 on error
-
-  node ~/.claude/bin/devsprint-tools.cjs update-acceptance-criteria --id <workItemId> --criteria "<html>" --cwd $CWD
-    -> stdout: JSON {"status":"updated","id":N}
-    -> Updates the Acceptance Criteria field of a work item. Accepts HTML.
-    -> exit 0 on success, exit 1 on error
-
-  node ~/.claude/bin/devsprint-tools.cjs add-comment --id <workItemId> --text "<html>" --cwd $CWD
-    -> stdout: JSON {"status":"created","id":N,"commentId":N}
-    -> Adds a comment (Discussion) to a work item. Text accepts HTML for rich formatting.
-    -> exit 0 on success, exit 1 on error
-
-  node ~/.claude/bin/devsprint-tools.cjs delete-comment --id <workItemId> --comment-id <commentId> --cwd $CWD
-    -> stdout: JSON {"status":"deleted","id":N,"commentId":N}
-    -> Deletes a comment from a work item.
-    -> exit 0 on success, exit 1 on error
+  node ~/.claude/bin/devsprint-tools.cjs clear-status --story-id {storyId} --cwd $CWD
+    -> Clears dashboard status for a story.
 </context>
 
 <process>
@@ -180,11 +177,7 @@ If the agent status has no `active` entry, or the target story is not in it, pro
 
 **Step 1 — Check prerequisites:**
 
-1. Verify `~/.claude/bin/devsprint-tools.cjs` exists via Bash `test -f ~/.claude/bin/devsprint-tools.cjs`.
-   If it does not exist: tell the user "Azure DevOps tools not installed. Check that ~/.claude/bin/devsprint-tools.cjs exists." Stop.
-
-2. Run `node ~/.claude/bin/devsprint-tools.cjs load-config --cwd $CWD`.
-   If exit 1: tell the user "No Azure DevOps config found. Run `/devsprint-setup` to configure your connection." Stop.
+No prerequisites to check — MCP server handles Azure DevOps authentication via OAuth. Proceed directly.
 
 **Step 1.5 — Dashboard status reporting (applies to ALL steps):**
 
@@ -228,17 +221,15 @@ Without this, the dashboard status will go STALE during parallel agent work. Eve
 **Step 2 — Fetch stories:**
 
 **If `singleItemMode`:** Skip sprint metadata fetch. Fetch the work item directly:
-Run `node ~/.claude/bin/devsprint-tools.cjs get-work-item {targetItemId} --cwd $CWD`.
-- If exit 1: show error. Stop.
-- If exit 0: parse the JSON array. Find the target item.
+Call `mcp__azure-devops__ado_wit_get_work_item` with the `targetItemId` and expand=Relations.
+- If error: show error. Stop.
+- If success: parse the response. Find the target item.
 
-**If the target item is a User Story:** also fetch child tasks via sprint items:
-Run `node ~/.claude/bin/devsprint-tools.cjs get-sprint-items --me --cwd $CWD`.
-Filter for items where `parentId === targetItemId` — these are the child tasks. `get-work-item` may not return children, so this is the reliable way to find them.
+**If the target item is a User Story:** also fetch child tasks. Extract child IDs from the relations (where rel === "System.LinkTypes.Hierarchy-Forward"), then batch-fetch them with `mcp__azure-devops__ado_wit_get_work_item` for each child ID. Alternatively, call `mcp__azure-devops__ado_wit_my_work_items` with project "Verdo Agile Development" and filter for items where `parentId === targetItemId` — these are the child tasks.
 
 **Determine item type and planning scope:**
 
-1. If the target item's `type === "User Story"`: Find child tasks from the sprint items response (filtered by `parentId === targetItemId`).
+1. If the target item's `type === "User Story"`: Find child tasks from the relations or my-work-items response (filtered by `parentId === targetItemId`).
 
    Filter child tasks to only those in **New** or **Active** state (exclude Resolved, Closed, Done). Call these `plannable tasks`.
 
@@ -275,9 +266,7 @@ Filter for items where `parentId === targetItemId` — these are the child tasks
 2. If the target item's `type === "Task"`: the user passed a task ID. Determine what to plan:
 
    **If `headless = true`:** Default to `planningScope = "task"` (they specifically requested this task). Set `targetTaskId = targetItemId`. Use the task's `parentId` to fetch the parent story for context:
-   ```
-   node ~/.claude/bin/devsprint-tools.cjs get-work-item {parentId} --cwd $CWD
-   ```
+   Call `mcp__azure-devops__ado_wit_get_work_item` with the parentId and expand=Relations.
 
    **If `headless = false`:** Ask the user:
    - Question: "#{targetItemId} is a task under story #{parentId} ({parentStoryTitle}). What do you want to plan?"
@@ -295,14 +284,15 @@ Filter for items where `parentId === targetItemId` — these are the child tasks
 
 **Step 2.5 — Download and parse attachments (if any):**
 
-For each story being processed, check if it has an `attachments` array (only available from `get-work-item`, not `get-sprint-items`).
+For each story being processed, check if the work item response includes attachment URLs in the relations (attachments appear as relations with rel === "AttachedFile").
 
 If the story has attachments:
 1. Create the directory `$CWD/.planning/attachments/{storyId}/` if it doesn't exist.
 2. For each attachment:
-   a. Run `node ~/.claude/bin/devsprint-tools.cjs download-attachment --url "{attachment.url}" --output "$CWD/.planning/attachments/{storyId}/{attachment.name}" --cwd $CWD`
-   b. Run `node ~/.claude/bin/devsprint-tools.cjs parse-file --file "$CWD/.planning/attachments/{storyId}/{attachment.name}" --cwd $CWD`
-   c. Store the parsed content (subject, from, to, date, body) alongside the story data. This content is used in Step 4.5 (repo analysis) and Step 5.5 (verification) as additional context for understanding the story.
+   a. Download the attachment file using Bash `curl` with the attachment URL (the MCP work item response includes the URL). If authentication is needed, use the WebFetch tool.
+   b. Save to `$CWD/.planning/attachments/{storyId}/{attachment.name}`
+   c. Run `node ~/.claude/bin/devsprint-tools.cjs parse-file --file "$CWD/.planning/attachments/{storyId}/{attachment.name}" --cwd $CWD`
+   d. Store the parsed content (subject, from, to, date, body) alongside the story data. This content is used in Step 4.5 (repo analysis) and Step 5.5 (verification) as additional context for understanding the story.
 3. Display: "Downloaded {N} attachment(s) for #{storyId}: {comma-separated file names}"
 
 For images (.png, .jpg, .gif, .bmp, .svg): skip `parse-file` — instead, use the Read tool to view the image directly during Step 4.5 analysis.
@@ -310,15 +300,15 @@ For images (.png, .jpg, .gif, .bmp, .svg): skip `parse-file` — instead, use th
 The attachment content is treated as supplementary story context — it should be incorporated into the story spec (STORY.md) under a "## Attached Reference Material" section, summarizing the key information extracted from each attachment.
 
 **If NOT `singleItemMode`:** Fetch the full sprint:
-Run `node ~/.claude/bin/devsprint-tools.cjs get-sprint --cwd $CWD`.
-- If exit 1: show the error message to the user. Stop.
-- If exit 0: parse the JSON. Extract `name` for display.
+Call `mcp__azure-devops__ado_work_list_team_iterations` with project "Verdo Agile Development" and timeframe "current".
+- If error: show the error message to the user. Stop.
+- If success: parse the response. Extract `name` for display.
 
 **Step 3 — Fetch assigned stories (skip if `singleItemMode`):**
 
-Run `node ~/.claude/bin/devsprint-tools.cjs get-sprint-items --me --cwd $CWD`.
-- If exit 1: show the error message to the user. Stop.
-- If exit 0: parse the JSON array.
+Call `mcp__azure-devops__ado_wit_my_work_items` with project "Verdo Agile Development".
+- If error: show the error message to the user. Stop.
+- If success: parse the response.
 
 Filter to top-level stories only:
 - Items where `type === "User Story"` AND (`parentId === null` OR `parentId` is not present in the items list).
@@ -344,12 +334,12 @@ For stories WITHOUT an existing analysis: proceed normally (no question asked).
 
 **Step 3.6 — Fetch attachments (all-stories mode only):**
 
-In all-stories mode, `get-sprint-items` doesn't return attachment info (it uses the batch API which only returns fields). For each story that will be analyzed (not skipped in Step 3.5), fetch its attachments:
+In all-stories mode, the my-work-items response may not include attachment info. For each story that will be analyzed (not skipped in Step 3.5), fetch its full details with attachments:
 
-1. Run `node ~/.claude/bin/devsprint-tools.cjs get-work-item {storyId} --cwd $CWD` — the response includes `attachments` on the primary item if any exist.
+1. Call `mcp__azure-devops__ado_wit_get_work_item` with the storyId and expand=Relations — the response includes attachment URLs in relations if any exist.
 2. If the story has attachments, follow the same download+parse flow as Step 2.5.
 
-This adds one API call per story but ensures attachments are available for all modes.
+This adds one MCP call per story but ensures attachments are available for all modes.
 
 **Story mode detection:**
 
@@ -371,7 +361,7 @@ For tasks (`planningScope = "task"`): first check the parent story's mapping in 
 3. **Scan parent directory:** Check if the parent directory of `$CWD` has exactly one repo folder (directory with `.git`). If exactly one: use that repo.
 
 4. **Only ask if none of the above resolves a repo:**
-   - Fetch repos from Azure DevOps: Run `node ~/.claude/bin/devsprint-tools.cjs list-repos --cwd $CWD`.
+   - Fetch repos from Azure DevOps: Call `mcp__azure-devops__ado_repo_list_repos_by_project` with project "Verdo Agile Development".
    - **If `headless = true`:** Write a question file using the headless protocol. Use `type: "choice"` with the repo names as options. Then poll for the answer.
    - **If `headless = false`:** Ask the user using `AskUserQuestion`:
      - Question: "Which repo should story #{id} ({title}) be planned in?"
@@ -575,11 +565,8 @@ For each verified item, **replace** the description with the verified analysis. 
 <i>Sprint-analyse verificeret {today's date}</i>
 ```
 
-Then run:
-```
-node ~/.claude/bin/devsprint-tools.cjs update-description --id {itemId} --description "{newDescriptionHtml}" --cwd $CWD
-```
-Where `{itemId}` is the task ID or story ID depending on `planningScope`.
+Then call `mcp__azure-devops__ado_wit_update_work_item` with the work item ID and the new description HTML.
+Where the work item ID is the task ID or story ID depending on `planningScope`.
 
 If update fails, warn the user but continue (non-blocking error). The verified understanding is still used locally for file generation.
 
@@ -599,10 +586,7 @@ Rules for user-facing acceptance criteria:
 - Each criterion should be verifiable by a non-developer
 - Include any blocked/skipped items with explanation
 
-Run:
-```
-node ~/.claude/bin/devsprint-tools.cjs update-acceptance-criteria --id {storyId} --criteria "{html}" --cwd $CWD
-```
+Call `mcp__azure-devops__ado_wit_update_work_item` with the storyId and the acceptance criteria HTML.
 
 If update fails, warn but continue (non-blocking).
 
@@ -845,11 +829,8 @@ After a spec is approved, post a **summary** as an HTML-formatted comment on the
 - `<b>` for emphasis, `<i>` for metadata
 - Skip verbose sections (full Implementation Notes, Architecture details) — those live in the local spec file
 
-Run:
-```
-node ~/.claude/bin/devsprint-tools.cjs add-comment --id {itemId} --text "{htmlSummary}" --cwd $CWD
-```
-Where `{itemId}` is the story ID or task ID depending on `planningScope`.
+Call `mcp__azure-devops__ado_wit_add_work_item_comment` with the work item ID and the HTML summary.
+Where the work item ID is the story ID or task ID depending on `planningScope`.
 
 If the comment post fails, warn the user but continue (non-blocking error). The local spec file is the source of truth.
 

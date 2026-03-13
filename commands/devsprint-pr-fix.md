@@ -11,6 +11,8 @@ allowed-tools:
   - Grep
   - AskUserQuestion
   - Agent
+  - mcp__azure-devops__ado_repo_list_pull_requests_by_repo_or_project
+  - mcp__azure-devops__ado_repo_list_pull_request_threads
 ---
 
 <feedback_rule>
@@ -31,27 +33,29 @@ Example with direct PR: `/devsprint-pr-fix 42917 --pr-id 4225 --repo-name NewSet
 </objective>
 
 <execution_context>
-Helper: ~/.claude/bin/devsprint-tools.cjs
-Config file: .planning/devsprint-config.json
+Azure DevOps access: via MCP tools (mcp__azure-devops__ado_*)
+Local helper (status reporting only): ~/.claude/bin/devsprint-tools.cjs
 $CWD is the project directory where .planning/ lives.
 </execution_context>
 
 <context>
-devsprint-tools.cjs CLI contracts used by this command:
+MCP tool contracts used by this command:
 
-  node ~/.claude/bin/devsprint-tools.cjs load-config --cwd $CWD
-    -> stdout: JSON {"org":"...","project":"...","pat":"<raw-decoded>"}
+  mcp__azure-devops__ado_repo_list_pull_requests_by_repo_or_project
+    -> Lists pull requests in a project
+    -> Filter results client-side: find PRs whose title starts with "#{storyId}"
+    -> Pick the most recent active PR
+    -> Extract: prId, title, description, status, sourceBranch, targetBranch, createdBy, repoName, url, workItemIds
 
-  node ~/.claude/bin/devsprint-tools.cjs find-pr --story-id <id> --cwd $CWD
-    -> Searches all repos for a PR whose title starts with "#{storyId}"
-    -> Returns the most recent matching PR (active PRs preferred over completed)
-    -> stdout: JSON {"prId":N,"title":"...","description":"...","status":"...","sourceBranch":"...","targetBranch":"...","createdBy":"...","repoName":"...","url":"...","workItemIds":[...]}
-
-  node ~/.claude/bin/devsprint-tools.cjs get-pr-threads --pr-id <id> --repo-name <name> [--unresolved] --cwd $CWD
-    -> Fetches comment threads on a PR (repo-name required here, obtained from find-pr)
-    -> stdout: JSON {"repoName":"...","threads":[{"threadId":N,"status":"active|fixed|closed|...","comments":[{"author":"...","content":"...","publishedDate":"..."}],"filePath":"/src/...", "lineNumber":N}]}
+  mcp__azure-devops__ado_repo_list_pull_request_threads
+    -> Fetches comment threads on a PR (requires repository name and PR ID)
+    -> Filter threads client-side by status to get unresolved/active ones
+    -> Each thread has: threadId, status, comments (author, content, publishedDate), filePath, lineNumber
     -> filePath and lineNumber are only present for file-level comments
-    -> --unresolved: filter to threads with status "active"
+
+Local helper (kept for file I/O only):
+  node ~/.claude/bin/devsprint-tools.cjs report-status --command pr-fix --story-id {storyId} --story-title "{storyTitle}" --step "<step>" --detail "<detail>" --cwd $CWD
+  node ~/.claude/bin/devsprint-tools.cjs clear-status --story-id {storyId} --cwd $CWD
 </context>
 
 <dashboard_status>
@@ -92,19 +96,17 @@ Then **abort immediately** with this message:
 
 If the agent status has no `active` entry, or the story is not in it, proceed normally.
 
-**Step 2 — Check prerequisites:**
-
-1. Verify `~/.claude/bin/devsprint-tools.cjs` exists.
-2. Run `load-config` to verify Azure DevOps connection.
+**Step 2 — (No prerequisites needed — MCP handles Azure DevOps auth automatically.)**
 
 **Step 3 — Find PR by story ID:**
 
-If `--pr-id` and `--repo-name` were provided, skip the find-pr call and use those values directly. Still run find-pr to get `sourceBranch` and `targetBranch`:
-Run: `node ~/.claude/bin/devsprint-tools.cjs find-pr --story-id {storyId} --cwd $CWD`
+If `--pr-id` and `--repo-name` were provided, skip the PR lookup and use those values directly. Still call the MCP tool to get `sourceBranch` and `targetBranch`:
 
-If exit 1 and no --pr-id provided: show error. The story may not have a PR yet. Stop.
+Call `mcp__azure-devops__ado_repo_list_pull_requests_by_repo_or_project` with project "Verdo Agile Development" to find PRs matching story #{storyId}. Filter the results to find PRs whose title starts with "#{storyId}". Pick the most recent active PR.
 
-Parse the JSON. Store `prId`, `repoName`, `sourceBranch`, `targetBranch`. Display:
+If no matching PR is found and no --pr-id was provided: show error. The story may not have a PR yet. Stop.
+
+Parse the result. Store `prId`, `repoName`, `sourceBranch`, `targetBranch`. Display:
 ```
 === PR #{prId}: {title} ===
 Status: {status}
@@ -118,9 +120,9 @@ If status is "completed" or "abandoned": display "PR #{prId} is {status} — ski
 
 **Step 4 — Fetch PR comment threads:**
 
-Run: `node ~/.claude/bin/devsprint-tools.cjs get-pr-threads --pr-id {prId} --repo-name {repoName} --unresolved --cwd $CWD`
+Call `mcp__azure-devops__ado_repo_list_pull_request_threads` with the repository name `{repoName}` and PR ID `{prId}`. Filter the returned threads by status to get only unresolved/active ones.
 
-Parse the JSON. Extract `threads` array from the response.
+Parse the result. Extract `threads` array from the response.
 
 If no active threads: display "No unresolved review comments on this PR. Nothing to fix." Stop.
 

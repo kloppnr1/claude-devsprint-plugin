@@ -11,6 +11,12 @@ allowed-tools:
   - Grep
   - AskUserQuestion
   - Agent
+  - mcp__azure-devops__ado_wit_get_work_items_for_iteration
+  - mcp__azure-devops__ado_wit_my_work_items
+  - mcp__azure-devops__ado_wit_update_work_item
+  - mcp__azure-devops__ado_wit_get_work_item
+  - mcp__azure-devops__ado_repo_create_pull_request
+  - mcp__azure-devops__ado_wit_link_work_item_to_pull_request
 ---
 
 <feedback_rule>
@@ -32,33 +38,52 @@ Execute one or all stories/tasks from the task map. For each item: create a feat
 </objective>
 
 <execution_context>
-Helper: ~/.claude/bin/devsprint-tools.cjs
-Config file: .planning/devsprint-config.json
+Local helper (git/file ops only): ~/.claude/bin/devsprint-tools.cjs
+Azure DevOps API: MCP tools prefixed with `mcp__azure-devops__ado_`
 Task map: .planning/devsprint-task-map.json
 $CWD is the project directory where .planning/ lives.
 </execution_context>
 
 <context>
-devsprint-tools.cjs CLI contracts used by this command:
+**MCP tools** for Azure DevOps operations (authentication handled automatically via OAuth):
 
-  node ~/.claude/bin/devsprint-tools.cjs load-config --cwd $CWD
-    -> stdout: JSON {"org":"...","project":"...","pat":"<raw-decoded>"}
-    -> exit 0 on success, exit 1 if no config
+  mcp__azure-devops__ado_wit_my_work_items
+    -> Returns the current user's work items from the current sprint
+    -> Use project name "Verdo Agile Development"
 
-  node ~/.claude/bin/devsprint-tools.cjs update-state --id <workItemId> --state <state> --cwd $CWD
-    -> stdout: JSON {"status":"updated","id":N,"state":"<newState>"}
+  mcp__azure-devops__ado_wit_get_work_items_for_iteration
+    -> Returns all work items for a specific iteration/sprint
+    -> Use project name "Verdo Agile Development"
+
+  mcp__azure-devops__ado_wit_get_work_item
+    -> Returns a single work item by ID
+    -> Use project name "Verdo Agile Development"
+
+  mcp__azure-devops__ado_wit_update_work_item
+    -> Updates fields on a work item (e.g., state)
+    -> Use project name "Verdo Agile Development"
     -> Valid states: "New", "Active", "Resolved", "Closed"
-    -> exit 0 on success, exit 1 on error (invalid transition, 403, etc.)
+
+  mcp__azure-devops__ado_repo_create_pull_request
+    -> Creates a pull request in an Azure DevOps Git repository
+    -> Use project name "Verdo Agile Development"
+
+  mcp__azure-devops__ado_wit_link_work_item_to_pull_request
+    -> Links a work item to a pull request
+    -> Use project name "Verdo Agile Development"
+
+**Local CLI contracts** (kept for local git and file operations):
 
   node ~/.claude/bin/devsprint-tools.cjs create-branch --repo <path> --story-id <id> --title <title> [--base <branch>]
     -> Stashes dirty changes, fetches base branch (develop, fallback main), creates feature/<id>-<slug>
     -> stdout: JSON {"branch":"...","base":"...","created":true|false}
     -> exit 0 on success, exit 1 on error
 
-  node ~/.claude/bin/devsprint-tools.cjs create-pr --repo <path> --branch <name> --base <branch> --title <title> --body <body> --story-id <id> --cwd $CWD
-    -> Pushes branch to origin, creates PR via Azure DevOps REST API, links to story
-    -> stdout: JSON {"pr":"<url>","prId":N,"branch":"...","base":"...","pushed":true,"linked":true|false}
-    -> exit 0 on success, exit 1 on error
+  node ~/.claude/bin/devsprint-tools.cjs report-status --command execute --story-id <id> --story-title "<title>" --step "<step>" --detail "<detail>" --repo "<repoName>" --cwd $CWD
+    -> Reports execution progress to the dashboard
+
+  node ~/.claude/bin/devsprint-tools.cjs clear-status --story-id <id> --cwd $CWD
+    -> Clears agent status for a story in the dashboard
 
   node ~/.claude/bin/devsprint-screenshot.cjs --url <url> --output <path> [--width 1280] [--height 900] [--wait 2000] [--full-page]
     -> Takes a browser screenshot using Puppeteer (auto-installs if needed)
@@ -167,16 +192,10 @@ If the agent status has no `active` entry, or the target story is not in it, pro
 
 **Step 2 — Check prerequisites:**
 
-1. Verify `~/.claude/bin/devsprint-tools.cjs` exists via Bash `test -f`.
-   If missing: tell user "Azure DevOps tools not installed. Check that ~/.claude/bin/devsprint-tools.cjs exists." Stop.
-
-2. Run `node ~/.claude/bin/devsprint-tools.cjs load-config --cwd $CWD`.
-   If exit 1: tell user "No Azure DevOps config found. Run `/devsprint-setup` to configure your connection." Stop.
-
-3. Check that `$CWD/.planning/devsprint-task-map.json` exists via Bash `test -f`.
+1. Check that `$CWD/.planning/devsprint-task-map.json` exists via Bash `test -f`.
    If missing: tell user "No task map found. Run `/devsprint-plan` first to analyze your sprint stories." Stop.
 
-4. Read `$CWD/.planning/devsprint-task-map.json` using the Read tool. Parse the JSON.
+2. Read `$CWD/.planning/devsprint-task-map.json` using the Read tool. Parse the JSON.
    If the `mappings` array is empty: tell user "Task map has no story mappings. Run `/devsprint-plan` and approve at least one story." Stop.
 
 **Step 2.5 — Load execution log:**
@@ -220,7 +239,7 @@ If the file doesn't exist, initialize as `{"executions": []}`. Store as `executi
 
 **Step 3a — Fetch live Azure DevOps state:**
 
-Run `node ~/.claude/bin/devsprint-tools.cjs get-sprint-items --me --cwd $CWD` to get all sprint items with their current states.
+Call `mcp__azure-devops__ado_wit_my_work_items` (project: "Verdo Agile Development") to get all sprint items with their current states.
 
 For each mapping in the task map, determine its status by checking:
 1. The execution log (was it previously executed?)
@@ -282,7 +301,7 @@ If `mode === "single"`:
 
 3. If still not found: check if `targetItemId` appears in any mapping's `taskIds` array. If yes: `executionScope = "task"`, use that mapping's `storyId` as the parent.
 
-4. If still not found: fetch the work item from Azure DevOps (`get-work-item {targetItemId}`) and check its type. If it's a Task, use its `parentId` to find the mapping. If it's a Story, look for it in the task map.
+4. If still not found: call `mcp__azure-devops__ado_wit_get_work_item` to fetch the work item and check its type. If it's a Task, use its `parentId` to find the mapping. If it's a Story, look for it in the task map.
 
 5. If the mapping is still not found: "#{targetItemId} is not in the task map. Available stories: {list}." Stop.
 
@@ -332,8 +351,17 @@ Launch an Agent with the full execution instructions for this single story (Step
 - The story/task mapping (storyId, storyTitle, repoPath) and `executionScope` ("story" or "task")
 - If `executionScope = "task"`: the `targetTaskId` and the path to the task spec: `{repoPath}/.planning/stories/{targetTaskId}.md`
 - If `executionScope = "story"`: the path to the story spec: `{repoPath}/.planning/stories/{storyId}.md`
-- The path to the config: `$CWD/.planning/devsprint-config.json`
-- All devsprint-tools.cjs CLI contracts needed (update-state, create-branch, create-pr)
+- **MCP tool instructions**: The agent MUST use MCP tools for all Azure DevOps operations:
+  - To update work item state: call `mcp__azure-devops__ado_wit_update_work_item` (project: "Verdo Agile Development")
+  - To fetch work item details: call `mcp__azure-devops__ado_wit_get_work_item` (project: "Verdo Agile Development")
+  - To fetch sprint items: call `mcp__azure-devops__ado_wit_my_work_items` (project: "Verdo Agile Development")
+  - To create a PR: call `mcp__azure-devops__ado_repo_create_pull_request` (project: "Verdo Agile Development")
+  - To link work item to PR: call `mcp__azure-devops__ado_wit_link_work_item_to_pull_request` (project: "Verdo Agile Development")
+- **Local CLI contracts** (for git and file operations only):
+  - `node ~/.claude/bin/devsprint-tools.cjs create-branch --repo <path> --story-id <id> --title <title>` — creates feature branch locally
+  - `node ~/.claude/bin/devsprint-tools.cjs report-status ...` — reports progress to dashboard
+  - `node ~/.claude/bin/devsprint-tools.cjs clear-status ...` — clears dashboard status
+  - `node ~/.claude/bin/devsprint-screenshot.cjs ...` — takes browser screenshots
 - The TDD workflow (RED → GREEN → REFACTOR)
 - Instruction to verify the FULL test suite passes BEFORE writing any code (baseline check on base branch). If tests fail, skip the story.
 - Instruction to run the FULL test suite (`dotnet test` / `npm test` / `pytest`) after all implementation — not just new tests. All tests must pass before resolving the story.
@@ -365,7 +393,7 @@ Execute Steps 4a–4h below. In `all` mode or `--headless`: if any step encounte
 
   **Step 4a — Check work item state:**
 
-  Run `node ~/.claude/bin/devsprint-tools.cjs get-sprint-items --me --cwd $CWD` and find the relevant item.
+  Call `mcp__azure-devops__ado_wit_my_work_items` (project: "Verdo Agile Development") and find the relevant item.
 
   **If `executionScope = "task"`:**
   - Find the item matching `targetTaskId`. Check the **task's** state (not the parent story).
@@ -535,13 +563,13 @@ Execute Steps 4a–4h below. In `all` mode or `--headless`: if any step encounte
 
   Determine which item to resolve:
   - If `executionScope = "task"`: resolve the **task** (not the parent story — the story may have other tasks still pending).
-    Run `node ~/.claude/bin/devsprint-tools.cjs update-state --id {targetTaskId} --state "Resolved" --cwd $CWD`
-    - If exit 0: Display "Task #{targetTaskId} resolved"
+    Call `mcp__azure-devops__ado_wit_update_work_item` to set the state of work item {targetTaskId} to "Resolved" (project: "Verdo Agile Development").
+    - If successful: Display "Task #{targetTaskId} resolved"
   - If `executionScope = "story"`: resolve the **story** and all its child tasks.
-    Run `node ~/.claude/bin/devsprint-tools.cjs update-state --id {storyId} --state "Resolved" --cwd $CWD`
-    - If exit 0: Display "Story #{storyId} resolved"
+    Call `mcp__azure-devops__ado_wit_update_work_item` to set the state of work item {storyId} to "Resolved" (project: "Verdo Agile Development").
+    - If successful: Display "Story #{storyId} resolved"
 
-  - If exit 1: warn but continue (item may already be resolved or in a non-transitionable state).
+  - If the update fails: warn but continue (item may already be resolved or in a non-transitionable state).
 
   **Step 4f — Push and create PR:**
 
@@ -581,12 +609,32 @@ Execute Steps 4a–4h below. In `all` mode or `--headless`: if any step encounte
   - If `executionScope = "task"`: title = `"#{targetTaskId} {taskTitle}"`, link to task ID
   - If `executionScope = "story"`: title = `"#{storyId} {storyTitle}"`, link to story ID
 
-  Run: `node ~/.claude/bin/devsprint-tools.cjs create-pr --repo {repoPath} --branch {branchName} --base {baseBranch} --title "{prTitle}" --body "{prBody}" --story-id {itemId} --cwd $CWD`
+  **Push, create PR, and link work item (3 steps):**
 
-  - If exit 0: parse JSON. Store `pr` URL in results. PR is automatically linked to the story.
-  - If exit 1:
+  a. **Push the branch** via Bash in the target repo:
+     ```bash
+     cd {repoPath} && git push -u origin {branchName}
+     ```
+     - If push fails: warn user. The branch exists locally but was not pushed. Suggest pushing manually.
+
+  b. **Create the PR** by calling `mcp__azure-devops__ado_repo_create_pull_request` with:
+     - Project: "Verdo Agile Development"
+     - Repository name (derived from repoPath — the last path segment, e.g., "NewSettlement.CustomerSupport")
+     - Source branch: `{branchName}`
+     - Target branch: `{baseBranch}`
+     - Title: `{prTitle}`
+     - Description: `{prBody}`
+     - Store the returned PR ID as `prId` and construct the PR URL.
+
+  c. **Link the work item to the PR** by calling `mcp__azure-devops__ado_wit_link_work_item_to_pull_request` with:
+     - The work item ID (`targetTaskId` for task scope, `storyId` for story scope)
+     - The PR ID from step b
+
+  - If PR creation succeeds: store PR URL in results. Display "PR created: {prUrl}"
+  - If PR creation fails:
     - `single` mode: warn user. The branch is already pushed — suggest creating PR manually in Azure DevOps.
     - `all` mode: log error. Record "PR not created" and move on.
+  - If work item linking fails: warn but continue — the PR exists, linking can be done manually.
 
   Record story outcome: "completed" (with PR URL), "partial" (work remains), or "skipped" (with reason).
 
@@ -680,9 +728,9 @@ Next steps:
 
 **Common errors and responses:**
 
-- `update-state` returns exit 1 with "invalid state transition": The story may already be in the target state or in a state that doesn't allow the transition (e.g., Closed → Active). Warn but continue. Non-blocking.
+- `mcp__azure-devops__ado_wit_update_work_item` fails with "invalid state transition": The story may already be in the target state or in a state that doesn't allow the transition (e.g., Closed → Active). Warn but continue. Non-blocking.
 
-- `update-state` returns 403: "Insufficient permissions. Your PAT may not have `vso.work_write` scope. Regenerate your PAT with `vso.work_write` and run `/devsprint-setup`."
+- MCP tool returns 403 or authentication error: "Azure DevOps MCP authentication failed. Check that the Azure DevOps MCP server is configured and authenticated." Stop.
 
 - Task map references a repo path that no longer exists:
   - `single` mode: warn the user and ask for the correct path.
@@ -701,9 +749,8 @@ Next steps:
 - PR creation fails: Branch is already pushed. Suggest creating the PR manually in Azure DevOps.
 
 **In `all` mode only:** Never stop the loop for per-story errors. Only STOP the entire execution for:
-- Missing devsprint-tools.cjs (nothing can work without it)
-- Missing config (no API access)
 - Missing or empty task map (nothing to execute)
+- MCP authentication failure (no API access at all)
 
 </error_handling>
 

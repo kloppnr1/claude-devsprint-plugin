@@ -516,12 +516,36 @@ async function handleRequest(req, res) {
             await new Promise(r => req.on('end', r));
             const { storyId: closeId } = JSON.parse(body);
             if (!closeId) { res.writeHead(400); res.end(JSON.stringify({ error: 'storyId required' })); return; }
-            const { execSync } = require('child_process');
             try {
-              const out = execSync(`node "${path.join(process.env.HOME || process.env.USERPROFILE, '.claude', 'bin', 'devsprint-tools.cjs')}" update-state --id ${closeId} --state Closed --cwd "${CWD}"`, { encoding: 'utf-8' });
-              data = JSON.parse(out);
+              const cfg = getConfig();
+              const ep = getEncodedPat();
+              const patchUrl = `${cfg.org}/${cfg.project}/_apis/wit/workitems/${closeId}?api-version=7.1`;
+              const patchBody = JSON.stringify([{ op: 'add', path: '/fields/System.State', value: 'Closed' }]);
+              const patchRes = await new Promise((resolve, reject) => {
+                const parsedUrl = new URL(patchUrl);
+                const opts = {
+                  hostname: parsedUrl.hostname, port: 443,
+                  path: parsedUrl.pathname + parsedUrl.search, method: 'PATCH',
+                  headers: {
+                    'Authorization': `Basic ${ep}`,
+                    'Content-Type': 'application/json-patch+json',
+                    'Accept': 'application/json',
+                    'Content-Length': Buffer.byteLength(patchBody),
+                  },
+                };
+                const r = https.request(opts, (resp) => {
+                  let d = ''; resp.on('data', c => d += c);
+                  resp.on('end', () => resolve({ status: resp.statusCode, body: d }));
+                });
+                r.on('error', reject);
+                r.write(patchBody); r.end();
+              });
+              if (patchRes.status !== 200) {
+                res.writeHead(500); res.end(JSON.stringify({ error: `Update failed: HTTP ${patchRes.status}` })); return;
+              }
+              data = { status: 'updated', id: closeId, state: 'Closed' };
             } catch (e) {
-              res.writeHead(500); res.end(JSON.stringify({ error: e.stderr || e.message })); return;
+              res.writeHead(500); res.end(JSON.stringify({ error: e.message })); return;
             }
           } else {
             res.writeHead(405); res.end(JSON.stringify({ error: 'POST only' })); return;

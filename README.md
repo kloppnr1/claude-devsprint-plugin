@@ -14,7 +14,7 @@ Your sprint board stays in sync because the plugin updates it as it works.
 - **Batch mode** — run `/devsprint-execute` with no arguments and it loops through every story in your sprint. Errors on one story don't block the next
 - **Fix PR comments** — `/devsprint-pr-fix <story-id>` fetches review comments, fixes them, and pushes
 
-Zero external dependencies. Just Node.js built-ins and the Azure DevOps REST API.
+All Azure DevOps communication goes through the [official Microsoft MCP server](https://www.npmjs.com/package/@azure-devops/mcp) — no custom HTTP code needed. Authentication uses OAuth (browser login).
 
 ## What it looks like
 
@@ -252,7 +252,7 @@ Review the PRs in Azure DevOps, leave comments, then run **`/devsprint-pr-fix`**
 ## Quick start
 
 ```
-/devsprint-setup              →  Connect to Azure DevOps (one-time)
+/devsprint-setup              →  Register MCP server + optional dashboard config
 /devsprint-sprint             →  See your sprint board
 /devsprint-create <description> → Create stories & tasks from natural language
 /devsprint-plan [story-id]    →  Analyze stories → generate specs
@@ -269,12 +269,8 @@ Review the PRs in Azure DevOps, leave comments, then run **`/devsprint-pr-fix`**
 ## Prerequisites
 
 - [Claude Code](https://docs.anthropic.com/en/docs/claude-code) CLI installed
-- Node.js (no external dependencies — uses built-in modules only)
-- An Azure DevOps Personal Access Token with these scopes:
-  - `vso.project` — read project/iteration data
-  - `vso.work` — read work items
-  - `vso.work_write` — create/update work items
-  - `vso.code` — create pull requests
+- Node.js (for the local helper script and dashboard)
+- An Azure DevOps organization accessible via browser (OAuth login on first use)
 
 ## Installation
 
@@ -284,9 +280,9 @@ cd claude-devsprint-plugin
 ./install.sh
 ```
 
-This copies commands and the helper script to `~/.claude/`. Restart Claude Code to pick up changes.
+This copies commands, the helper script, and `.mcp.json` to `~/.claude/`. Restart Claude Code to pick up changes.
 
-### Configure credentials
+### First-time setup
 
 Run the setup command in any project directory:
 
@@ -294,14 +290,10 @@ Run the setup command in any project directory:
 /devsprint-setup
 ```
 
-This prompts for:
-- **Organization URL** — e.g., `https://dev.azure.com/yourorg` or just `yourorg`
-- **Project name** — your Azure DevOps project
-- **PAT** — your Personal Access Token
-- **Team** — auto-detected from the project's team list (you pick from options)
-- **Area path** — auto-resolved from your team's settings (no manual input needed)
-
-Team and area ensure that new work items land in the right place on the board. Credentials are stored in `.planning/devsprint-config.json` (PAT is base64-encoded). This file is project-local — add it to `.gitignore`.
+This:
+1. Registers the Azure DevOps MCP server in `.mcp.json`
+2. On first use, opens a browser window for **OAuth login** — no PAT needed for Claude commands
+3. Optionally configures a PAT for the standalone web dashboard (the dashboard can't use MCP since it runs as a separate Node.js process)
 
 ### Verify connection
 
@@ -309,7 +301,39 @@ Team and area ensure that new work items land in the right place on the board. C
 /devsprint-test
 ```
 
-Confirms your credentials work and have the required scopes.
+Tests the MCP connection and optionally verifies the dashboard PAT.
+
+## Architecture
+
+### MCP-first design
+
+All Azure DevOps API communication goes through the [official Microsoft MCP server](https://www.npmjs.com/package/@azure-devops/mcp) (`@azure-devops/mcp`). This gives Claude native tool access to 86+ Azure DevOps operations via OAuth authentication.
+
+The local helper script (`devsprint-tools.cjs`) handles only operations that can't use MCP:
+- **`create-branch`** — local git operations (stash, fetch, checkout)
+- **`parse-file`** — binary file parsing (.msg, .eml, .docx)
+- **`report-status` / `clear-status`** — dashboard agent status file I/O
+
+The dashboard server (`dashboard/server.cjs`) has its own minimal HTTP client for the 2-3 read-only Azure DevOps API calls it needs (sprint data, PR status). It uses a PAT from `.planning/devsprint-config.json`.
+
+### Multi-provider ready
+
+The architecture supports adding additional MCP servers alongside Azure DevOps. For example, GitHub:
+
+```json
+{
+  "mcpServers": {
+    "azure-devops": {
+      "command": "npx",
+      "args": ["-y", "@azure-devops/mcp", "verdo365"]
+    },
+    "github": {
+      "type": "url",
+      "url": "https://api.githubcopilot.com/mcp/"
+    }
+  }
+}
+```
 
 ## Dashboard
 
@@ -346,7 +370,7 @@ That's it. Open `http://localhost:3000` in your browser.
 node dashboard/server.cjs --cwd ~/source/repos/MyApp
 ```
 
-The dashboard starts immediately — no build step, no dependencies, no config. It reads `.planning/` files and queries Azure DevOps using the credentials from `/devsprint-setup`.
+The dashboard starts immediately — no build step, no dependencies, no config. It reads `.planning/` files and queries Azure DevOps using the PAT from `/devsprint-setup`.
 
 ### Features
 
@@ -378,13 +402,6 @@ When you click **Analyze** on a story that has multiple tasks in New or Active s
 
 If you select a single task, the agent generates a focused TASK.md spec covering only that task. You can then click **Execute** to implement just that task — it creates a feature branch, makes the changes described in the task spec, runs tests, creates a PR, and resolves the task in Azure DevOps. Other tasks on the story are left untouched.
 
-This is useful when:
-- A story is partially done and only one task remains
-- You want to ship a small task (e.g., documentation) without re-planning the whole story
-- A new task was added to an already-completed story (post-merge fix)
-
-The question panel uses file-based communication (`.planning/questions/` and `.planning/answers/`) between the headless agent and the dashboard. Questions appear automatically when the agent needs input — no manual polling or page refresh required.
-
 ### How it works
 
 The dashboard reads from files in `.planning/`:
@@ -392,31 +409,27 @@ The dashboard reads from files in `.planning/`:
 - `devsprint-execution-log.json` — execution results per story
 - `devsprint-agent-status.json` — real-time agent progress
 
-It also queries Azure DevOps for live sprint data and PR status.
+It also queries Azure DevOps for live sprint data and PR status using the PAT from `.planning/devsprint-config.json`.
 
 ## Commands
 
 ### `/devsprint-setup`
 
-Interactive setup wizard for Azure DevOps credentials. On re-run, shows current values (PAT masked) and lets you update individual fields.
+Registers the Azure DevOps MCP server and optionally configures a PAT for the dashboard. On first MCP use, a browser window opens for OAuth login.
 
 ### `/devsprint-test`
 
-Tests the stored credentials against the Azure DevOps API. Verifies both `vso.project` and `vso.work` scopes. Shows a clear success/failure message with suggested fixes.
+Tests the MCP connection by querying projects and work items. Also checks dashboard PAT if configured.
 
 ### `/devsprint-sprint`
 
-Fetches and displays the current sprint backlog with ANSI-colored state indicators. Shows:
-- Sprint name and dates
-- User stories with description and acceptance criteria
-- Tasks grouped under their parent story
-- State (blue=Active, green=Resolved, etc.), assigned user, and other metadata
+Fetches and displays the current sprint backlog via MCP. Shows stories with tasks, state, and progress.
 
-Defaults to showing only your assigned items (`--me`). Use `--all` to see the entire sprint.
+Defaults to showing only your assigned items. Use `--all` to see the entire sprint, `--detailed` for descriptions and acceptance criteria.
 
 ### `/devsprint-create <description>`
 
-Create stories and tasks from a natural language description. Parses your intent, creates work items via the Azure DevOps API — all assigned to the current sprint.
+Create stories and tasks from a natural language description. Creates work items via MCP — all assigned to the current sprint.
 
 Examples:
 - `/devsprint-create Add notification preferences page` — creates a single User Story
@@ -425,122 +438,54 @@ Examples:
 
 ### `/devsprint-plan [story-id | task-id]`
 
-The main analysis pipeline. Run without arguments to plan all assigned stories, or pass an ID to plan a single item:
-
-- `/devsprint-plan` — plan all assigned stories
-- `/devsprint-plan 1205` — plan story #1205
-- `/devsprint-plan 1207` — plan task #1207 (auto-detects it's a task, asks whether to plan the task or its parent story)
-
-**Task-level planning:** When you pass a story ID that has multiple tasks in New/Active state, you're asked whether to plan the whole story or a single task. Selecting a task generates a focused TASK.md spec (lighter than STORY.md) with parent story context. This is useful when a story is partially done and you only need to implement one remaining task.
+The main analysis pipeline. Run without arguments to plan all assigned stories, or pass an ID to plan a single item.
 
 Already resolved stories are automatically skipped. Previously analyzed stories are skipped unless `--reanalyze` is passed.
-
-**What it does, step by step:**
-
-1. **Fetch stories** — pulls your assigned stories from the current sprint via Azure DevOps API
-2. **Auto-detect repos** — checks task map history, sibling directories, and project repos. Only asks the user when auto-detection fails (first time for a new repo)
-3. **Deep repo analysis** — for each story, searches the target repo for files matching story keywords, reads relevant code, traces call chains, and checks for existing feature branches
-4. **Show analysis** — presents its understanding of each story (summary, work type, repo analysis, tasks). Non-research stories continue automatically; research stories get an interactive dialogue
-5. **Update Azure DevOps** — replaces the story description and acceptance criteria with the verified analysis (see warning below)
-6. **Generate story spec** — writes `STORY.md` to `{repoPath}/.planning/stories/{storyId}.md` with: goal, background, testable acceptance criteria, key files with paths, architecture/code flow, implementation notes, contacts, open questions, and out-of-scope items
-7. **Self-review** — checks the generated spec against a quality checklist (specific goal, real file paths, traced code flow, no vague placeholders, blockers captured) and fixes issues before presenting
-8. **Spec review** — shows the full spec and asks "Changes?" — type corrections or "ok" to continue
-9. **Post to Azure DevOps** — adds a summary of the approved spec as a comment on the story
-10. **Task map** — writes/merges `.planning/devsprint-task-map.json` mapping story IDs → repos → task IDs for status tracking during execution
-
-> **Warning: Azure DevOps fields are overwritten.** By default, `/devsprint-plan` **replaces** the Description and Acceptance Criteria fields on each story with its verified analysis. Azure DevOps keeps revision history, so nothing is lost — but the original text is no longer visible without checking the history. If you want to keep the original fields untouched, add `--no-devops-update` to skip all Azure DevOps writes (description, acceptance criteria, and comments). The local STORY.md spec is still generated.
-
-**Research mode:** Stories tagged with `research` in Azure DevOps get a deeper treatment — broader codebase exploration, a multi-round dialogue where you discuss findings and possible approaches together, and a STORY.md that includes a "Research Findings" section with problem analysis, approaches considered, and the agreed approach.
 
 ### `/devsprint-execute [story-id]`
 
 Execute story plans. Two modes depending on arguments:
 
-- **`/devsprint-execute 1205`** — single story. Creates a feature branch, implements the story spec, resolves tasks, creates a PR. Mostly autonomous — only asks for input on items explicitly marked as blocking in the spec.
-- **`/devsprint-execute 1207`** — single task. If a TASK.md spec exists for this ID, only that task is implemented. The parent story provides context but other tasks are untouched.
-- **`/devsprint-execute`** — all stories, fully autonomous. Loops through every story in the task map without user interaction. Errors on one story don't block the next. Outputs a full summary with all PR links at the end.
+- **`/devsprint-execute 1205`** — single story. Creates a feature branch, implements the story spec, resolves tasks, creates a PR.
+- **`/devsprint-execute 1207`** — single task. If a TASK.md spec exists for this ID, only that task is implemented.
+- **`/devsprint-execute`** — all stories, fully autonomous. Loops through every story in the task map without user interaction.
 
-PRs are created via the Azure DevOps REST API and automatically linked to the story via `workItemRefs`.
+PRs are created via MCP and automatically linked to the story.
 
 ### `/devsprint-pr-fix <story-id>`
 
-Fix PR review comments. Takes a story ID, finds the matching PR automatically (by title prefix `#{storyId}`), fetches unresolved review comments, checks out the PR branch, fixes all issues, runs tests, and pushes.
-
-```
-/devsprint-pr-fix 1205
-```
-
-## Helper script CLI
-
-The `devsprint-tools.cjs` script handles all Azure DevOps API communication. It can be used standalone:
-
-```bash
-# Credentials
-node devsprint-tools.cjs save-config --org <url> --project <name> --pat <token> [--team <team>] [--area <area>] --cwd <path>
-node devsprint-tools.cjs load-config --cwd <path>
-node devsprint-tools.cjs test --cwd <path>
-
-# Teams & areas
-node devsprint-tools.cjs list-teams --cwd <path>
-node devsprint-tools.cjs get-team-area --team "<team name>" --cwd <path>
-
-# Sprint
-node devsprint-tools.cjs get-sprint --cwd <path>
-node devsprint-tools.cjs get-sprint-items [--me] --cwd <path>
-node devsprint-tools.cjs show-sprint [--me] --cwd <path>
-
-# Work items
-node devsprint-tools.cjs create-work-item --type <type> --title "<title>" [--description "<html>"] [--parent <id>] [--sprint] [--assigned-to "<name>"] [--area "<path>"] [--tags "<tags>"] --cwd <path>
-node devsprint-tools.cjs update-state --id <workItemId> --state <state> --cwd <path>
-node devsprint-tools.cjs update-description --id <workItemId> --description "<text>" --cwd <path>
-node devsprint-tools.cjs update-acceptance-criteria --id <workItemId> --criteria "<html>" --cwd <path>
-node devsprint-tools.cjs get-child-states --id <storyId> --cwd <path>
-
-# Comments
-node devsprint-tools.cjs add-comment --id <workItemId> --text "<html>" --cwd <path>
-node devsprint-tools.cjs delete-comment --id <workItemId> --comment-id <commentId> --cwd <path>
-
-# Git
-node devsprint-tools.cjs create-branch --repo <path> --story-id <id> --title <title> [--base <branch>]
-node devsprint-tools.cjs create-pr --repo <path> --branch <name> --base <branch> --title <title> --body <body> --story-id <id> --cwd <path>
-
-# Pull requests
-node devsprint-tools.cjs find-pr --story-id <id> --cwd <path>              # Find PR by story ID (searches all repos)
-node devsprint-tools.cjs get-pr --pr-id <id> [--repo-name <name>] --cwd <path>  # Fetch PR details
-node devsprint-tools.cjs get-pr-threads --pr-id <id> [--repo-name <name>] [--active-only] --cwd <path>
-
-# Repositories
-node devsprint-tools.cjs list-repos [--top <N>] --cwd <path>
-node devsprint-tools.cjs get-branch-links --id <workItemId> --cwd <path>
-```
-
-All commands output JSON to stdout and use exit code 0/1 for success/failure.
+Fix PR review comments. Finds the matching PR via MCP, fetches unresolved review comments, checks out the PR branch, fixes all issues, runs tests, and pushes.
 
 ## Project structure
 
 ```
 claude-devsprint-plugin/
-├── install.sh                     # One-command installer
+├── .mcp.json                        # MCP server registration (azure-devops)
+├── install.sh                       # One-command installer
 ├── bin/
-│   └── devsprint-tools.cjs          # Node.js helper — all Azure DevOps API calls
+│   ├── devsprint-tools.cjs          # Local operations helper (git, file parsing, status)
+│   └── devsprint-screenshot.cjs     # Puppeteer screenshot tool
 ├── commands/
-│   ├── devsprint-setup.md            # /devsprint-setup — credential configuration
-│   ├── devsprint-test.md             # /devsprint-test — connection verification
-│   ├── devsprint-sprint.md           # /devsprint-sprint — sprint backlog display
-│   ├── devsprint-create.md           # /devsprint-create — create stories & tasks
-│   ├── devsprint-plan.md             # /devsprint-plan — story analysis & spec generation
-│   ├── devsprint-execute.md          # /devsprint-execute — story execution & PR creation
-│   └── devsprint-pr-fix.md           # /devsprint-pr-fix — fix PR review comments
+│   ├── devsprint-setup.md           # /devsprint-setup — MCP + dashboard config
+│   ├── devsprint-test.md            # /devsprint-test — connection verification
+│   ├── devsprint-sprint.md          # /devsprint-sprint — sprint backlog display
+│   ├── devsprint-create.md          # /devsprint-create — create stories & tasks
+│   ├── devsprint-plan.md            # /devsprint-plan — story analysis & spec generation
+│   ├── devsprint-execute.md         # /devsprint-execute — story execution & PR creation
+│   └── devsprint-pr-fix.md          # /devsprint-pr-fix — fix PR review comments
+├── dashboard/
+│   ├── server.cjs                   # Dashboard web server (own PAT-based API client)
+│   └── index.html                   # Dashboard frontend
 ├── CONTRIBUTING.md
 └── README.md
 ```
 
 ## Security
 
-- PAT is stored base64-encoded in `.planning/devsprint-config.json` — this is light obfuscation, not encryption
+- MCP server uses OAuth — credentials are managed by the browser login flow
+- Dashboard PAT is stored base64-encoded in `.planning/devsprint-config.json` — this is light obfuscation, not encryption
 - Always add `devsprint-config.json` to `.gitignore` — the setup command checks for this
-- The PAT never leaves your local machine except in API calls to your Azure DevOps instance
-- No external dependencies — the helper script uses only Node.js built-in modules (`https`, `fs`, `path`)
+- The local helper script uses only Node.js built-in modules (`fs`, `path`, `child_process`, `zlib`)
 
 ## License
 

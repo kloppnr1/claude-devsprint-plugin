@@ -18,46 +18,34 @@ When the user chooses "Edit" or any option meaning "change something", respond w
 </context_rule>
 
 <objective>
-Create User Stories and Tasks in Azure DevOps from a natural language description. Parses the user's intent, creates work items via the API, and links tasks to their parent stories. All items are assigned to the current sprint.
+Create User Stories and Tasks in Azure DevOps from a natural language description. Parses the user's intent, creates work items via MCP tools, and links tasks to their parent stories. All items are assigned to the current sprint.
 </objective>
 
 <execution_context>
-Helper: ~/.claude/bin/devsprint-tools.cjs
-Config file: .planning/devsprint-config.json
+MCP server: azure-devops (registered in .mcp.json)
 $CWD is the project directory where .planning/ lives.
 </execution_context>
 
 <context>
-devsprint-tools.cjs CLI contract used by this command:
+MCP tools used by this command:
 
-  node ~/.claude/bin/devsprint-tools.cjs create-work-item --type <type> --title "<title>" [--description "<html>"] [--parent <id>] [--sprint] [--assigned-to "<name>"] [--area "<path>"] [--tags "<comma-separated>"] --cwd $CWD
+  mcp__azure-devops__ado_wit_create_work_item
     -> Creates a work item in Azure DevOps
-    -> --type: "User Story", "Task", "Bug", "Feature", or "Epic"
-    -> --title: Work item title (required)
-    -> --description: HTML description (optional)
-    -> --parent: Parent work item ID to link as child (optional)
-    -> --sprint: Assign to current active sprint (optional)
-    -> --assigned-to: Display name of person to assign (optional)
-    -> --area: Area path for the work item (optional)
-    -> --tags: Comma-separated tags (optional)
-    -> stdout: JSON {"status":"created","id":N,"type":"...","title":"...","url":"..."}
-    -> exit 0 on success, exit 1 on error
+    -> Parameters: project, type (User Story/Task/Bug), title, description (optional), areaPath (optional), iterationPath (optional), assignedTo (optional), parentId (optional), additionalFields (optional)
+    -> Returns: created work item with id, url, etc.
 
-  node ~/.claude/bin/devsprint-tools.cjs get-sprint-items --me --cwd $CWD
-    -> Fetches items in current sprint (for context on existing stories)
-    -> stdout: JSON array
+  mcp__azure-devops__ado_wit_my_work_items
+    -> Fetches items assigned to current user (for context on existing stories)
 
-  node ~/.claude/bin/devsprint-tools.cjs load-config --cwd $CWD
-    -> Reads config
-    -> stdout: JSON {"org":"...","project":"...","pat":"..."}
+  mcp__azure-devops__ado_work_list_team_iterations
+    -> Gets current sprint iteration path (needed for iterationPath parameter)
 </context>
 
 <process>
 
-**Step 1 — Check prerequisites:**
+**Step 1 — Get current sprint iteration path:**
 
-1. Verify `~/.claude/bin/devsprint-tools.cjs` exists. If not: "Azure DevOps tools not installed." Stop.
-2. Run `node ~/.claude/bin/devsprint-tools.cjs load-config --cwd $CWD`. If exit 1: "No config. Run `/devsprint-setup`." Stop.
+Call `mcp__azure-devops__ado_work_list_team_iterations` with the project and team, timeframe "current", to get the current sprint's iteration path. Store as `currentIterationPath`.
 
 **Step 2 — Parse user intent:**
 
@@ -67,7 +55,7 @@ Common patterns:
 - **Single story**: "Tilføj prisområde-kolonne til kundelisten" → 1 User Story
 - **Story with tasks**: "Implementer CSV-eksport: 1) Backend endpoint 2) Frontend knap 3) Tests" → 1 User Story + 3 Tasks
 - **Multiple stories**: User may describe several features → multiple User Stories
-- **Tasks under existing story**: "Tilføj tasks til #42920: test, deploy" → Tasks with --parent 42920
+- **Tasks under existing story**: "Tilføj tasks til #42920: test, deploy" → Tasks with parentId 42920
 - **Bug**: "Bug: faktura viser forkert beløb" → 1 User Story (parent) + 1 Bug (child)
 
 If the argument references an existing story ID (e.g., "#42920" or "under 42920"), use that as the parent for tasks.
@@ -97,9 +85,16 @@ Create items in order:
 1. **Stories first** (they have no parent dependency within this batch)
 2. **Tasks second** (they need the parent story ID from step 1)
 
-For each item, run `create-work-item` with `--sprint` flag.
+For each item, call `mcp__azure-devops__ado_wit_create_work_item` with:
+- `project`: "Verdo Agile Development"
+- `type`: "User Story", "Task", or "Bug"
+- `title`: the work item title
+- `iterationPath`: `currentIterationPath` (assigns to current sprint)
+- `assignedTo`: "Martin Klopp Jensen"
+- `parentId`: parent story ID (for tasks/bugs)
+- `description`: HTML description if applicable
 
-For tasks under a story created in this batch, use the ID returned from the story creation as `--parent`.
+For tasks under a story created in this batch, use the ID returned from the story creation as `parentId`.
 
 **Step 5 — Summary:**
 
@@ -116,7 +111,6 @@ Display results with the story ID prominently shown:
     ✓ #42953 [Task] "Test: Skriv tests for prisområde-logik"
 
 Sprint: Sprint 39 - 2026
-https://verdo365.visualstudio.com/.../_workitems/edit/42950
 ```
 
 **Step 6 — Show next step:**
@@ -128,7 +122,8 @@ Display: "Next step: `/devsprint-plan {storyId}` to analyze and create spec."
 </process>
 
 <rules>
-- Always use `--sprint` to assign items to the current sprint
+- Always assign to current sprint using iterationPath
+- Always assign to "Martin Klopp Jensen"
 - Story titles should be user-facing descriptions (Danish is fine)
 - Task titles should be actionable and specific
 - Create stories before tasks (tasks need parent ID)

@@ -7,58 +7,60 @@ allowed-tools:
 ---
 
 <objective>
-Fetch and display the current sprint backlog from Azure DevOps with ANSI-colored terminal output. One command does everything — no intermediate steps needed.
+Fetch and display the current sprint backlog from Azure DevOps using the MCP server. Renders a formatted sprint board in the terminal.
 </objective>
 
 <execution_context>
-Helper: ~/.claude/bin/devsprint-tools.cjs
-Config file: .planning/devsprint-config.json
+MCP server: azure-devops (registered in .mcp.json)
+Helper (for rendering only): ~/.claude/bin/devsprint-tools.cjs
 </execution_context>
 
-<context>
-$CWD is the project directory where .planning/ lives.
-
-devsprint-tools.cjs CLI contract used by this command:
-
-  node ~/.claude/bin/devsprint-tools.cjs show-sprint [--me] [--all] [--detailed] --cwd $CWD
-    -> Fetches sprint metadata, fetches work items, renders colored board to stdout
-    -> --me: filter to items assigned to the authenticated user
-    -> --all: show all stories + all tasks including resolved/closed/done
-    -> --detailed: show description, acceptance criteria, and all tasks (verbose view)
-    -> Default: compact view — no description/AC, hides completed tasks (shows "+ N completed" count), hides resolved/closed stories
-    -> exit 0 on success
-    -> exit 1 on error (stderr contains message — e.g., no config, no active sprint, auth failure)
-</context>
-
 <process>
-1. **Check that the helper exists:**
-   Run: `test -f ~/.claude/bin/devsprint-tools.cjs`
-   If missing: tell the user "Azure DevOps tools not installed. Check that ~/.claude/bin/devsprint-tools.cjs exists." Stop.
+1. **Fetch current sprint:**
+   Call `mcp__azure-devops__ado_work_list_team_iterations` with the project and team to get iterations. Identify the current sprint (timeframe = current).
 
-2. **Run the show-sprint command:**
+2. **Fetch sprint work items:**
+   Call `mcp__azure-devops__ado_wit_get_work_items_for_iteration` with the current iteration to get all work items.
 
-   **Default (no flags):** Compact view of the user's own incomplete items:
-   Run: `node ~/.claude/bin/devsprint-tools.cjs show-sprint --me --cwd $CWD`
+   Alternatively, call `mcp__azure-devops__ado_wit_my_work_items` to get items assigned to the current user.
 
-   **If the user passed `--all`:** Include resolved/closed stories and completed tasks:
-   Run: `node ~/.claude/bin/devsprint-tools.cjs show-sprint --me --all --cwd $CWD`
+3. **Display the sprint board:**
+   Format the work items as a sprint board. Group by story, show child tasks underneath.
 
-   **If the user passed `--detailed`:** Full verbose view with description and AC:
-   Run: `node ~/.claude/bin/devsprint-tools.cjs show-sprint --me --detailed --cwd $CWD`
+   For each story:
+   ```
+   ━━━ #{id} {title} [{state}] ━━━
+   {If --detailed: description and acceptance criteria}
+
+   Tasks:
+     [{state}] #{taskId} {taskTitle} — {assignedTo}
+     [{state}] #{taskId} {taskTitle} — {assignedTo}
+     {If not --all and completed tasks exist: "+ N completed"}
+   ```
+
+   **Default (no flags):** Show only the user's items. Hide completed tasks (show "+ N completed" count). Hide resolved/closed stories.
+
+   **If `--all`:** Show all stories and tasks including resolved/closed/done.
+
+   **If `--detailed`:** Show description, acceptance criteria, and all tasks (verbose view).
+
+4. **Sprint summary:**
+   ```
+   Sprint: {sprintName} ({startDate} — {finishDate})
+   Stories: {total} ({active} active, {resolved} resolved)
+   Tasks: {total} ({done}/{total} done)
+   ```
 </process>
 
 <important>
-- Do NOT output any thinking, planning, or narration text. No "Let me fetch...", "Now I'll render...", or similar messages.
-- Do NOT copy the output into your text response. The sprint board uses ANSI color codes that only render in the Bash tool output (user expands it with Ctrl+O). Copying strips the colors.
-- After the command, output only a single short line like: "Sprint board above — expand with Ctrl+O for full colored view."
+- Do NOT output thinking, planning, or narration text. Just show the sprint board.
+- After the board, output only a short summary line.
 </important>
 
 <success_criteria>
-- Sprint board is displayed with a single command call
-- No intermediate steps, no JSON juggling, no dynamic script construction
-- No narration or thinking text — only the sprint board output
-- Default is compact view (no description/AC, completed tasks hidden)
-- --all shows all stories and tasks including completed
-- --detailed shows full verbose view with description and AC
-- Errors produce clear, actionable messages from the helper script
+- Sprint board displayed using MCP data
+- Default shows only current user's incomplete items
+- --all shows everything including completed
+- --detailed shows descriptions and acceptance criteria
+- Clear sprint summary with dates and progress
 </success_criteria>
