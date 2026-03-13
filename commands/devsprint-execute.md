@@ -1,6 +1,6 @@
 ---
 name: devsprint-execute
-description: Execute story or task plans and update Azure DevOps status automatically
+description: Execute story or task plans — implement, push, and create PR
 argument-hint: "[story-id or task-id]"
 allowed-tools:
   - Read
@@ -29,7 +29,7 @@ When the user needs to provide open-ended feedback or corrections, respond with 
 </context_rule>
 
 <objective>
-Execute one or all stories/tasks from the task map. For each item: create a feature branch, implement the work from the spec, auto-resolve in Azure DevOps, push, and create a PR.
+Execute one or all stories/tasks from the task map. For each item: create a feature branch, implement the work from the spec, push, and create a PR. The work item is NOT auto-resolved — the user must verify the PR and approve from the dashboard.
 
 **Mode depends on arguments:**
 - With story ID (`/devsprint-execute 42920`): single-story mode — interactive, can ask user questions on blockers.
@@ -377,15 +377,14 @@ Launch an Agent with the full execution instructions for this single story (Step
   - Step 4d: `--step "Implementing" --detail "Writing implementation code"`
   - Step 4d (full suite): `--step "Running full test suite" --detail "{testCommand}" --command "{testCommand}"`
   - Step 4d.5: `--step "UI verification" --detail "Checking visual output for frontend changes"`
-  - Step 4e: `--step "Resolving story" --detail "Setting story to Resolved in Azure DevOps"`
-  - Step 4f: `--step "Creating PR" --detail "Pushing and creating pull request"`
-  - Step 4g: `--step "Complete" --detail "Story #{storyId} finished"`
+  - Step 4e: `--step "Creating PR" --detail "Pushing and creating pull request"`
+  - Step 4f: `--step "Complete" --detail "Story #{storyId} finished — awaiting user approval"`
 
 **Mode-specific agent instructions:**
 - `all` mode or `headless`: Include instruction to NEVER use `AskUserQuestion` — fully autonomous. On blockers, make best judgment and continue. Critical errors are logged, not stopped on.
 - `single` mode (not headless): Include instruction to make best judgment and continue on blockers, like `all` mode. Only use `AskUserQuestion` if the story spec explicitly marks something as "BLOKERER implementation". Stop on critical errors (missing spec, test baseline failures).
 
-Do NOT run agents in background — run them sequentially so each story completes before the next starts. Parse the agent's returned summary, add to `executionResults`, and **immediately write to the execution log** (Step 4g) before launching the next agent. This ensures progress is persisted even if a later story crashes or the session is interrupted.
+Do NOT run agents in background — run them sequentially so each story completes before the next starts. Parse the agent's returned summary, add to `executionResults`, and **immediately write to the execution log** (Step 4f) before launching the next agent. This ensures progress is persisted even if a later story crashes or the session is interrupted.
 
 Steps 4a–4h below describe the work the agent performs:
 
@@ -559,19 +558,7 @@ Execute Steps 4a–4h below. In `all` mode or `--headless`: if any step encounte
 
      Report status: `--step "UI verification" --detail "Checking visual output for frontend changes"`
 
-  **Step 4e — Resolve work item in Azure DevOps:**
-
-  Determine which item to resolve:
-  - If `executionScope = "task"`: resolve the **task** (not the parent story — the story may have other tasks still pending).
-    Call `mcp__azure-devops__ado_wit_update_work_item` to set the state of work item {targetTaskId} to "Resolved" (project: "Verdo Agile Development").
-    - If successful: Display "Task #{targetTaskId} resolved"
-  - If `executionScope = "story"`: resolve the **story** and all its child tasks.
-    Call `mcp__azure-devops__ado_wit_update_work_item` to set the state of work item {storyId} to "Resolved" (project: "Verdo Agile Development").
-    - If successful: Display "Story #{storyId} resolved"
-
-  - If the update fails: warn but continue (item may already be resolved or in a non-transitionable state).
-
-  **Step 4f — Push and create PR:**
+  **Step 4e — Push and create PR:**
 
   Build a PR body string containing:
   ```
@@ -638,7 +625,7 @@ Execute Steps 4a–4h below. In `all` mode or `--headless`: if any step encounte
 
   Record story outcome: "completed" (with PR URL), "partial" (work remains), or "skipped" (with reason).
 
-  **Step 4g — Write to execution log:**
+  **Step 4f — Write to execution log:**
 
   After each story completes (whether completed, partial, or skipped), immediately append the result to the execution log file at `$CWD/.planning/devsprint-execution-log.json`.
 
@@ -690,7 +677,6 @@ This run:
   {status icon} #{storyId} — {storyTitle}
      Branch: {branchName}
      Tests: {testsPassed} passed, {testsFailed} failed ({testCommand}) — {testSuiteStatus}
-     Story: {Resolved ✓ | Active}
      PR: {prUrl | "not created — {reason}"}
 {end for}
 
@@ -719,7 +705,7 @@ Run `node ~/.claude/bin/devsprint-tools.cjs clear-status --story-id {storyId} --
 ```
 Next steps:
   {If status is partial: "Run `/devsprint-execute {storyId}` to retry."}
-  {If all resolved: "Review and merge the PRs, then run `/devsprint-sprint` to see updated sprint status."}
+  {If all completed: "Review and merge the PRs, then approve each story from the dashboard to close it."}
 ```
 
 </process>
@@ -763,14 +749,14 @@ Next steps:
 - Execution log (`devsprint-execution-log.json`) is written after EACH story — survives interruptions
 - Re-running `/devsprint-execute` only processes stories not yet completed
 - Each story gets its own feature branch from develop
-- Stories are resolved automatically after implementation
+- Stories are NOT auto-resolved — user must verify the PR and click "Approve" on the dashboard to close
 - Each story gets a PR linked to the Azure DevOps story
 - In `all` mode: errors on one story do not block the next
 - In `single` mode: user is consulted on blockers
 - Existing test suite is verified green BEFORE any code changes (Step 4b.1)
 - Full test suite (`dotnet test` / `npm test`) runs after implementation — not just new tests
 - Test results (passed/failed counts) are included in the summary output
-- Story is NOT resolved if the full test suite has failures
+- PR is NOT created if the full test suite has failures
 - Clear summary with PR links and test results at the end
 - UI changes trigger automatic visual verification via screenshot
 - Screenshots are saved as documentation in `.planning/screenshots/`

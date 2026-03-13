@@ -644,7 +644,7 @@
       <span id="sprint-dates"></span>
     </div>
   </div>
-  <button class="btn-refresh" onclick="refreshAll()">Refresh</button>
+  <button class="btn-refresh" onclick="this.textContent='...';refreshAll(true).then(()=>{this.textContent='\u2713';setTimeout(()=>this.textContent='Refresh',800)})">Refresh</button>
 </div>
 
 <div class="shell">
@@ -1788,7 +1788,7 @@ function renderDaily() {
 
 /* ── Data Loading ── */
 let _lastDataKey = '';
-async function refreshAll() {
+async function refreshAll(force) {
   await Promise.all([
     F('/api/sprint').then(d => S.sprint = d).catch(() => {}),
     F('/api/pr-status').then(d => S.pr = d).catch(() => S.pr = []),
@@ -1798,7 +1798,7 @@ async function refreshAll() {
     F('/api/agent-status').then(d => { S.agent = d; renderAgent(d); }).catch(() => renderAgent(null)),
   ]);
   const key = JSON.stringify([S.sprint, S.pr, S.git, S.exec, S.map]);
-  if (key !== _lastDataKey) { _lastDataKey = key; renderMain(); renderDaily(); }
+  if (force || key !== _lastDataKey) { _lastDataKey = key; renderMain(); renderDaily(); }
 }
 
 refreshAll();

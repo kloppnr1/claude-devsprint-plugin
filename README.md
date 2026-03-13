@@ -1,20 +1,40 @@
 # claude-devsprint-plugin
 
-An Azure DevOps plugin for [Claude Code](https://docs.anthropic.com/en/docs/claude-code) that turns your sprint backlog into working code.
+A sprint automation plugin for [Claude Code](https://docs.anthropic.com/en/docs/claude-code) that supports both **Azure DevOps** and **GitHub**.
 
-Point it at your sprint, and it will read your stories, analyze the relevant repos, write implementation plans, generate code, create PRs, and resolve tasks — all without leaving your terminal. Run `/devsprint-execute` and walk away. Come back to pull requests linked to your stories, tasks marked as resolved, and a summary of everything it did.
-Your sprint board stays in sync because the plugin updates it as it works.
+Point it at your sprint, and it will read your stories, analyze the relevant repos, write implementation plans, generate code, and create PRs — all without leaving your terminal. Run `/devsprint-execute` and walk away. Come back to pull requests ready for review. Verify each PR, then click **Approve** on the dashboard to close the item.
+
+### Supported providers
+
+| | Azure DevOps | GitHub |
+|---|---|---|
+| **Work items** | Work Items (User Story, Task, Bug) | Issues (with labels) |
+| **Sprints** | Iterations | Milestones |
+| **PRs** | Azure DevOps Pull Requests | GitHub Pull Requests |
+| **Auth** | PAT (stored in config) | OAuth (browser login) |
+| **Parent linking** | `System.Parent` field | "Parent: #N" in issue body |
+
+### Quick switch between providers
+
+Both provider configs are stored side-by-side in `.planning/devsprint-config.json`. Switch with:
+
+```
+/devsprint-setup github    →  switch to GitHub
+/devsprint-setup azdo      →  switch to Azure DevOps
+```
+
+This changes the active `provider` field — credentials for both providers are kept.
 
 ## What can it do?
 
 - **View your sprint** from the terminal — stories, tasks, state, descriptions, all color-coded
 - **Create stories and tasks** from natural language — just describe what you need
 - **Analyze stories** — reads the target repo, traces code paths, identifies the files that need changes, and writes a detailed implementation spec
-- **Execute stories autonomously** — creates a feature branch, writes the code, runs tests, commits, pushes, creates a PR linked to the story, and resolves all tasks
+- **Execute stories autonomously** — creates a feature branch, writes the code, runs tests, commits, pushes, and creates a PR linked to the story
 - **Batch mode** — run `/devsprint-execute` with no arguments and it loops through every story in your sprint. Errors on one story don't block the next
 - **Fix PR comments** — `/devsprint-pr-fix <story-id>` fetches review comments, fixes them, and pushes
 
-All Azure DevOps communication goes through the [official Microsoft MCP server](https://www.npmjs.com/package/@azure-devops/mcp) — no custom HTTP code needed. Authentication uses OAuth (browser login).
+Zero external dependencies. Just Node.js built-ins and MCP servers for provider access.
 
 ## What it looks like
 
@@ -97,26 +117,17 @@ Will execute:
 
   ... implementing (TDD: write tests → implement → verify) ...
 
-  Task resolution:
-    #3041 (Backend: Store dark mode preference): Resolved ✓
-    #3042 (Frontend: Add toggle switch): Resolved ✓
-    #3043 (Tests: Dark mode persistence and UI): Resolved ✓
-
-  Story #3040 resolved ✓
-
 ╔══════════════════════════════════════════╗
 ║           Execution Complete             ║
 ╚══════════════════════════════════════════╝
 
   ✓ #3040 — Add dark mode toggle to settings page
      Branch: feature/3040-dark-mode-toggle
-     Tasks: 3/3 resolved
      Tests: 22 passed, 0 failed (dotnet test) — all passed
-     Story: Resolved ✓
      PR: https://dev.azure.com/.../pullrequest/187
 ```
 
-Review the PR in Azure DevOps. Leave comments on anything that needs fixing, then run **`/devsprint-pr-fix`**:
+The story is now in the dashboard's **Awaiting verification** group. Review the PR. Leave comments on anything that needs fixing, then run **`/devsprint-pr-fix`**:
 
 ```
 > /devsprint-pr-fix 3040
@@ -207,12 +218,12 @@ Summary: 2 to execute, 1 already done
 ━━━ [1/2] Story #3044 — Email notification preferences ━━━
   Created branch feature/3044-email-notifications from develop
   ... implementing ...
-  Story #3044 resolved ✓
+  PR created ✓
 
 ━━━ [2/2] Story #3048 — Fix timezone bug in scheduler ━━━
   Created branch feature/3048-timezone-fix from develop
   ... implementing ...
-  Story #3048 resolved ✓
+  PR created ✓
 
 ╔══════════════════════════════════════════╗
 ║           Execution Complete             ║
@@ -222,11 +233,11 @@ Sprint: Sprint 7
 Stories processed: 2 | Previously completed: 1
 
   ✓ #3044 — Email notification preferences
-     Tasks: 4/4 resolved | Tests: 31 passed, 0 failed
+     Tests: 31 passed, 0 failed
      PR: https://dev.azure.com/.../pullrequest/188
 
   ✓ #3048 — Fix timezone bug in scheduler
-     Tasks: 2/2 resolved | Tests: 18 passed, 0 failed
+     Tests: 18 passed, 0 failed
      PR: https://dev.azure.com/.../pullrequest/189
 
 Previously completed:
@@ -239,7 +250,7 @@ All pull requests:
   https://dev.azure.com/.../pullrequest/189
 ```
 
-Review the PRs in Azure DevOps, leave comments, then run **`/devsprint-pr-fix`** for each:
+Stories now appear in the dashboard under **Awaiting verification**. Review the PRs, leave comments, then run **`/devsprint-pr-fix`** for each. After merging, click **Approve** on the dashboard to close:
 
 ```
 > /devsprint-pr-fix 3044
@@ -252,11 +263,11 @@ Review the PRs in Azure DevOps, leave comments, then run **`/devsprint-pr-fix`**
 ## Quick start
 
 ```
-/devsprint-setup              →  Register MCP server + optional dashboard config
+/devsprint-setup [github|azdo] →  Connect to GitHub (or "azdo" for Azure DevOps)
 /devsprint-sprint             →  See your sprint board
-/devsprint-create <description> → Create stories & tasks from natural language
+/devsprint-create <description> → Create stories & tasks (or issues) from natural language
 /devsprint-plan [story-id]    →  Analyze stories → generate specs
-/devsprint-execute [story-id] →  Implement, commit, push, create PR, resolve tasks
+/devsprint-execute [story-id] →  Implement, commit, push, create PR (items not auto-resolved)
 /devsprint-pr-fix <story-id>  →  Fix PR review comments automatically
 ```
 
@@ -264,13 +275,28 @@ Review the PRs in Azure DevOps, leave comments, then run **`/devsprint-pr-fix`**
 1. `/devsprint-sprint` — see what's in the sprint
 2. `/devsprint-create` — add missing stories or tasks (optional)
 3. `/devsprint-plan` — analyze stories, auto-detect repos, generate implementation specs
-4. `/devsprint-execute` — implement everything, create PRs, resolve tasks automatically
+4. `/devsprint-execute` — implement everything and create PRs
+5. Review PRs, then **Approve** from the dashboard to close items
 
 ## Prerequisites
 
 - [Claude Code](https://docs.anthropic.com/en/docs/claude-code) CLI installed
 - Node.js (for the local helper script and dashboard)
-- An Azure DevOps organization accessible via browser (OAuth login on first use)
+
+**GitHub:**
+- MCP server registered automatically by `/devsprint-setup github`
+- OAuth browser login on first use — no token stored locally
+
+**Azure DevOps:**
+- MCP server registered automatically by `/devsprint-setup azdo`
+- PAT with scopes: Work Items (Read & Write), Code (Read & Write), Pull Requests (Read & Write)
+
+**Requirements for stories to appear:**
+
+| | GitHub | Azure DevOps |
+|---|---|---|
+| Sprint | Assigned to a milestone | Assigned to an iteration |
+| Assignee | Assigned to you | Assigned to you |
 
 ## Installation
 
@@ -282,18 +308,21 @@ cd claude-devsprint-plugin
 
 This copies commands, the helper script, and `.mcp.json` to `~/.claude/`. Restart Claude Code to pick up changes.
 
-### First-time setup
+### Configure provider
 
-Run the setup command in any project directory:
+Run the setup command in any project directory, specifying your provider:
 
 ```
-/devsprint-setup
+/devsprint-setup github    →  connect to GitHub
+/devsprint-setup azdo      →  connect to Azure DevOps
 ```
+
+Both configs are stored side-by-side in `.planning/devsprint-config.json`. Switching providers keeps both sets of credentials — only the active `provider` field changes.
 
 This:
-1. Registers the Azure DevOps MCP server in `.mcp.json`
-2. On first use, opens a browser window for **OAuth login** — no PAT needed for Claude commands
-3. Optionally configures a PAT for the standalone web dashboard (the dashboard can't use MCP since it runs as a separate Node.js process)
+1. Registers the appropriate MCP server in `.mcp.json`
+2. For GitHub: opens a browser window for **OAuth login** — no token stored locally
+3. For Azure DevOps: prompts for a PAT and optionally configures it for the standalone web dashboard
 
 ### Verify connection
 
@@ -370,7 +399,7 @@ That's it. Open `http://localhost:3000` in your browser.
 node dashboard/server.cjs --cwd ~/source/repos/MyApp
 ```
 
-The dashboard starts immediately — no build step, no dependencies, no config. It reads `.planning/` files and queries Azure DevOps using the PAT from `/devsprint-setup`.
+The dashboard starts immediately — no build step, no dependencies, no config. It reads `.planning/` files and queries your configured provider (GitHub or Azure DevOps) using the credentials from `/devsprint-setup`.
 
 ### Features
 
@@ -381,7 +410,7 @@ The dashboard starts immediately — no build step, no dependencies, no config. 
   - **Planned** — analyzed and ready for execution. Click **Execute** to start
   - **Not planned** — in sprint but not yet analyzed. Click **Analyze** to plan it
   - **Blocked** — title contains "BLOKERET" or execution was skipped
-  - **Done** — Closed/Done in Azure DevOps
+  - **Done** — Closed/Done in the provider
 - **Live agent status** — see what the agent is doing right now (which step, which story)
 - **Expandable run history** — click completed runs to see step-by-step log with timestamps
 - **PR status** — badges show active/merged/rejected, with a "Fix PR" button for active PRs
@@ -409,13 +438,13 @@ The dashboard reads from files in `.planning/`:
 - `devsprint-execution-log.json` — execution results per story
 - `devsprint-agent-status.json` — real-time agent progress
 
-It also queries Azure DevOps for live sprint data and PR status using the PAT from `.planning/devsprint-config.json`.
+It also queries your configured provider (GitHub or Azure DevOps) for live sprint data and PR status using the credentials from `.planning/devsprint-config.json`.
 
 ## Commands
 
-### `/devsprint-setup`
+### `/devsprint-setup [github|azdo]`
 
-Registers the Azure DevOps MCP server and optionally configures a PAT for the dashboard. On first MCP use, a browser window opens for OAuth login.
+Registers the appropriate MCP server for the chosen provider and configures credentials. For GitHub, a browser window opens for OAuth login — no token stored locally. For Azure DevOps, prompts for a PAT and optionally configures it for the dashboard. Both provider configs are stored side-by-side; switching only changes the active `provider` field.
 
 ### `/devsprint-test`
 
@@ -429,7 +458,7 @@ Defaults to showing only your assigned items. Use `--all` to see the entire spri
 
 ### `/devsprint-create <description>`
 
-Create stories and tasks from a natural language description. Creates work items via MCP — all assigned to the current sprint.
+Create stories and tasks (or GitHub issues) from a natural language description. Creates work items or issues via MCP — all assigned to the current sprint or milestone.
 
 Examples:
 - `/devsprint-create Add notification preferences page` — creates a single User Story
@@ -446,7 +475,7 @@ Already resolved stories are automatically skipped. Previously analyzed stories 
 
 Execute story plans. Two modes depending on arguments:
 
-- **`/devsprint-execute 1205`** — single story. Creates a feature branch, implements the story spec, resolves tasks, creates a PR.
+- **`/devsprint-execute 1205`** — single story. Creates a feature branch, implements the story spec, creates a PR. Items are NOT auto-resolved — approve from the dashboard after verifying.
 - **`/devsprint-execute 1207`** — single task. If a TASK.md spec exists for this ID, only that task is implemented.
 - **`/devsprint-execute`** — all stories, fully autonomous. Loops through every story in the task map without user interaction.
 
@@ -482,7 +511,8 @@ claude-devsprint-plugin/
 
 ## Security
 
-- MCP server uses OAuth — credentials are managed by the browser login flow
+- GitHub uses OAuth via MCP server — no token stored locally
+- Azure DevOps MCP server uses OAuth — credentials are managed by the browser login flow
 - Dashboard PAT is stored base64-encoded in `.planning/devsprint-config.json` — this is light obfuscation, not encryption
 - Always add `devsprint-config.json` to `.gitignore` — the setup command checks for this
 - The local helper script uses only Node.js built-in modules (`fs`, `path`, `child_process`, `zlib`)
